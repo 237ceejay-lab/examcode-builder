@@ -338,6 +338,18 @@ td:nth-child(3){width:95px;}
 /* FILE META — lemon green */
 .file-meta{color:#c8ff00 !important;font-family:var(--mono);font-size:0.65rem;}
 
+/* ─── FILE TYPE COLORS ─── */
+/* Document (file) cards — green */
+.file-card.file-doc{border-color:rgba(57,255,126,0.28);background:rgba(57,255,126,0.05);}
+.file-card.file-doc:hover{border-color:rgba(57,255,126,0.55);background:rgba(57,255,126,0.1);}
+.file-card.file-doc.selected{border-color:var(--green);background:rgba(57,255,126,0.18);box-shadow:0 0 12px rgba(57,255,126,0.15);}
+.file-card.file-doc .file-name{color:var(--green);}
+/* Folder cards — blue */
+.file-card.file-folder{border-color:rgba(0,212,255,0.25);background:rgba(0,212,255,0.04);}
+.file-card.file-folder:hover{border-color:rgba(0,212,255,0.5);background:rgba(0,212,255,0.09);}
+.file-card.file-folder.selected{border-color:var(--accent);background:var(--accent-dim);box-shadow:0 0 12px rgba(0,212,255,0.12);}
+.file-card.file-folder .file-name{color:var(--accent);}
+
 /* COLORFUL IMPORT BUTTON */
 .btn-import{background:linear-gradient(135deg,#7b61ff 0%,#00d4ff 50%,#39ff7e 100%);color:#030810;border:none;font-weight:700;}
 .btn-import:hover{filter:brightness(1.12);box-shadow:0 0 18px rgba(0,212,255,0.4);}
@@ -705,6 +717,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <div class="btn-group">
         <button class="btn active" id="sortNameBtn" onclick="sortFiles('name')">Name</button>
         <button class="btn" id="sortDateBtn" onclick="sortFiles('date')">Date</button>
+        <button class="btn" id="sortTypeBtn" onclick="sortFiles('type')">Type</button>
       </div>
       <div class="btn-group">
         <button class="btn" id="viewTilesBtn" title="Tiles view" onclick="setFilesView('tiles')">&#8861;</button>
@@ -2030,6 +2043,7 @@ function renderFilesPage() {
   var grid = document.getElementById('filesGrid'); if (!grid) return;
   var items = (folder.children || []).slice();
   if (sortMode === 'name') items.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  else if (sortMode === 'type') items.sort(function(a, b) { if (a.type !== b.type) return a.type === 'folder' ? -1 : 1; return a.name.localeCompare(b.name); });
   else items.sort(function(a, b) { return (b.modified || b.created || 0) - (a.modified || a.created || 0); });
   if (!items.length) {
     grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128194;</div><p>No files yet.<br>Use Builder to save files.</p></div>';
@@ -2047,7 +2061,7 @@ function renderFilesPage() {
     var metaStr = meta + (size ? ' &bull; ' + size : '');
     // Show unified ctx option if unified folders exist
     var hasUnified = unifiedFolders.length > 0;
-    return '<div class="file-card ' + (sel ? 'selected' : '') + '" id="fc-' + item.id + '"' +
+    return '<div class="file-card ' + (item.type === 'file' ? 'file-doc' : 'file-folder') + (sel ? ' selected' : '') + '" id="fc-' + item.id + '"' +
       ' onclick="fcClick(event,\'' + item.id + '\')"' +
       ' oncontextmenu="showCtx(event,\'' + item.id + '\')"' +
       ' ontouchstart="fcTouchStart(event,\'' + item.id + '\')"' +
@@ -2067,7 +2081,26 @@ function fcClick(e, id) {
   var node = findNode(fsRoot, id);
   if (!node) return;
   if (node.type === 'folder') navTo(node.id);
-  else openFileForEdit(node);
+  else {
+    var ts = node.modified || node.created || 0;
+    var dateStr = ts ? new Date(ts).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) + ' ' + new Date(ts).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '—';
+    var size = node.content ? (node.content.length >= 1024 ? (node.content.length / 1024).toFixed(1) + ' KB' : node.content.length + ' B') : '0 B';
+    var lines = (node.content || '').split('\n').filter(Boolean).length;
+    var infoHtml =
+      '<div style="background:var(--surface3);border:1px solid rgba(57,255,126,0.3);border-radius:8px;padding:12px 14px;margin-top:8px;display:flex;flex-direction:column;gap:6px;">' +
+        '<div style="font-size:0.82rem;font-weight:700;color:var(--green);word-break:break-word;">&#128196; ' + escH(node.name) + '</div>' +
+        '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:0.74rem;">' +
+          '<span style="color:var(--text3);">Entries</span><span style="color:var(--text);font-family:var(--mono);">' + lines + '</span>' +
+          '<span style="color:var(--text3);">Size</span><span style="color:var(--text);font-family:var(--mono);">' + size + '</span>' +
+          '<span style="color:var(--text3);">Modified</span><span style="color:var(--text);font-family:var(--mono);">' + dateStr + '</span>' +
+        '</div>' +
+      '</div>';
+    var capturedNode = node;
+    showRawModal('Open Document?', 'Open this document in the Builder?', infoHtml, [
+      { label: '&#9654; Open', cls: 'btn-success', cb: function() { closeModal(); openFileForEdit(capturedNode); } },
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]);
+  }
 }
 
 function toggleFileSelect(e, id) {
@@ -2151,6 +2184,7 @@ function sortFiles(mode) {
   sortMode = mode;
   document.getElementById('sortNameBtn').classList.toggle('active', mode === 'name');
   document.getElementById('sortDateBtn').classList.toggle('active', mode === 'date');
+  var tb = document.getElementById('sortTypeBtn'); if (tb) tb.classList.toggle('active', mode === 'type');
   renderFilesPage();
 }
 
