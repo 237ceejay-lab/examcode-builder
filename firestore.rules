@@ -1,0 +1,63 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════════════════
+//  ExamCode Builder — Cloud Firestore security rules
+//
+//  These rules make sure that:
+//   • Each user can read/write ONLY their own documents.
+//   • The super-admin (owner) can manage every user + see all activity.
+//   • A disabled user is locked out of all data, instantly.
+//   • Random sign-ups (the web API key is public) get NO access at all,
+//     because data access requires a profile that only an admin can create.
+//
+//  ⚠️  SET THE OWNER EMAIL BELOW to the SAME email you put in index.html.
+// ════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ⬇⬇⬇  CHANGE THIS to your owner / super-admin email (lowercase)  ⬇⬇⬇
+    function ownerEmail() { return 'owner@example.com'; }
+
+    function signedIn()   { return request.auth != null; }
+    function uid()        { return request.auth.uid; }
+    function isOwner()    { return signedIn() && request.auth.token.email != null
+                              && request.auth.token.email.lower() == ownerEmail(); }
+
+    function hasProfile(u) { return exists(/databases/$(database)/documents/users/$(u)); }
+    function prof(u)       { return get(/databases/$(database)/documents/users/$(u)).data; }
+
+    // an admin = the owner, OR any user whose profile.role == 'superadmin'
+    function isAdmin() {
+      return isOwner() || (signedIn() && hasProfile(uid()) && prof(uid()).role == 'superadmin');
+    }
+    // a user is "not disabled" if owner, or their profile exists and disabled != true
+    function notDisabled(u) {
+      return isOwner() || (hasProfile(u) && prof(u).disabled != true);
+    }
+
+    // ── USER PROFILES ──────────────────────────────────────────────
+    match /users/{userId} {
+      allow read:   if isOwner() || (signedIn() && uid() == userId) || isAdmin();
+      allow create: if isAdmin();                      // only admin/owner provisions accounts
+      allow update: if isAdmin()
+                    || (signedIn() && uid() == userId  // a user may update their OWN profile
+                        && request.resource.data.role     == resource.data.role      // ...but not role
+                        && request.resource.data.disabled == resource.data.disabled);// ...or disabled
+      allow delete: if isAdmin();
+
+      // Everything a user owns (state chunks, etc.) lives under their user doc.
+      match /{document=**} {
+        allow read, write: if isAdmin()
+                           || (signedIn() && uid() == userId && notDisabled(userId));
+      }
+    }
+
+    // ── GLOBAL ACTIVITY LOG ────────────────────────────────────────
+    match /activity/{logId} {
+      allow read:          if isAdmin();
+      allow create:        if signedIn() && request.resource.data.uid == uid();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

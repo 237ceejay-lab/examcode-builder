@@ -1,0 +1,3206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ExamCode Builder — UBa</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#070a12;--surface:#0d1120;--surface2:#131829;--surface3:#1a2038;--surface4:#212849;
+  --border:#1e2640;--border2:#2a3358;
+  --accent:#00d4ff;--accent-dim:rgba(0,212,255,0.12);
+  --accent2:#7b61ff;--accent3:#f0c040;
+  --green:#39ff7e;--red:#ff3c5a;--red-dim:rgba(255,60,90,0.12);--orange:#ff9500;
+  --dupe:#ccff00;--dupe-bg:rgba(204,255,0,0.14);--dupe-border:rgba(204,255,0,0.6);
+  --text:#dde3f5;--text2:#7a87aa;--text3:#404d6a;
+  --shadow:0 8px 40px rgba(0,0,0,0.7);--radius:12px;
+  --font:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace;
+  --nav-h:56px;--bot-h:60px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 15% 0%,rgba(0,212,255,0.04) 0%,transparent 60%),radial-gradient(ellipse 50% 35% at 85% 100%,rgba(123,97,255,0.05) 0%,transparent 55%);pointer-events:none;z-index:0;}
+
+/* NAV */
+nav{position:relative;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:var(--nav-h);background:rgba(13,17,32,0.96);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);flex-shrink:0;}
+.nav-logo{font-size:1.05rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;}
+.logo-accent{color:var(--accent);}
+.logo-pill{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);font-size:0.62rem;font-family:var(--mono);padding:1px 6px;border-radius:20px;letter-spacing:1px;}
+.nav-center{display:flex;gap:2px;}
+.nav-tab{padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;color:var(--text2);transition:all .2s;border:none;background:transparent;font-family:var(--font);}
+.nav-tab:hover{color:var(--text);background:var(--surface3);}
+.nav-tab.active{background:var(--accent-dim);color:var(--accent);border:1px solid var(--border2);}
+.save-badge{display:flex;align-items:center;gap:5px;font-size:0.68rem;color:var(--text3);font-family:var(--mono);}
+.save-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:glow-pulse 2s infinite;}
+@keyframes glow-pulse{0%,100%{opacity:1;box-shadow:0 0 6px var(--green);}50%{opacity:.4;box-shadow:none;}}
+
+/* LAYOUT */
+.app-body{position:relative;z-index:1;display:flex;flex:1;overflow:hidden;}
+.page{display:none;width:100%;height:100%;overflow:hidden;}
+.page.active{display:flex;}
+
+/* BOTTOM NAV */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(13,17,32,0.97);border-top:1px solid var(--border);backdrop-filter:blur(16px);height:var(--bot-h);}
+.bottom-nav-inner{display:flex;height:100%;}
+.bnav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-size:0.62rem;font-weight:600;color:var(--text3);transition:all .2s;border:none;background:transparent;font-family:var(--font);}
+.bnav-tab .bi{font-size:18px;}
+.bnav-tab.active{color:var(--accent);}
+
+/* BUILDER */
+#page-builder{flex-direction:row;}
+.setup-panel{width:270px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;padding:14px 12px;gap:10px;}
+.setup-panel.collapsed{display:none;}
+.sec-head{font-size:0.62rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:6px;padding:4px 0;}
+.sec-head::after{content:'';flex:1;height:1px;background:var(--border);}
+.fgrp{display:flex;flex-direction:column;gap:4px;}
+.flabel{font-size:0.72rem;font-weight:600;color:var(--text2);}
+.input-wrap{position:relative;}
+.finput{width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:0.8rem;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;}
+.finput:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim);}
+.ac-list{position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:500;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;max-height:160px;overflow-y:auto;display:none;box-shadow:var(--shadow);}
+.ac-list.open{display:block;}
+.ac-item{padding:8px 10px;cursor:pointer;transition:background .12s;display:flex;flex-direction:column;gap:2px;}
+.ac-item:hover{background:var(--surface4);}
+.ac-code{font-family:var(--mono);font-weight:700;font-size:0.78rem;color:var(--accent);}
+.ac-title-sm{font-size:0.68rem;color:var(--text2);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.preview-box{font-family:var(--mono);font-size:0.78rem;color:var(--accent3);padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;letter-spacing:1px;}
+
+/* BUTTONS */
+.btn{padding:9px 14px;border-radius:8px;border:none;cursor:pointer;font-family:var(--font);font-weight:700;font-size:0.8rem;transition:all .18s;letter-spacing:0.2px;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.btn-primary{background:var(--accent);color:#030810;}
+.btn-primary:hover{filter:brightness(1.15);box-shadow:0 0 18px rgba(0,212,255,0.35);}
+.btn-success{background:var(--green);color:#030810;}
+.btn-success:hover{filter:brightness(1.12);box-shadow:0 0 18px rgba(57,255,126,0.35);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-danger:hover{filter:brightness(1.12);}
+.btn-orange{background:var(--orange);color:#030810;}
+.btn-orange:hover{filter:brightness(1.12);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);}
+.btn-full{width:100%;}
+.btn-sm{padding:5px 10px;font-size:0.74rem;}
+
+/* SILENCE */
+.sil-row{display:flex;align-items:center;gap:8px;}
+.sil-row input[type=range]{flex:1;accent-color:var(--accent);}
+.sil-val{font-family:var(--mono);font-size:0.75rem;color:var(--accent3);min-width:36px;text-align:right;}
+
+/* STATS */
+.stats-grid{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.stat-item{display:flex;flex-direction:column;gap:1px;}
+.stat-n{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--accent);}
+.stat-n.ok{color:var(--green);}
+.stat-n.warn{color:var(--red);}
+.stat-l{font-size:0.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;}
+
+/* MATRIC AREA */
+.matric-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.voice-bar{padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+.mic-btn{width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--surface3);font-size:18px;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+.mic-btn.listening{background:var(--red);animation:mic-pulse 1.2s infinite;}
+@keyframes mic-pulse{0%{box-shadow:0 0 0 0 rgba(255,60,90,.5);}70%{box-shadow:0 0 0 12px rgba(255,60,90,0);}100%{box-shadow:0 0 0 0 rgba(255,60,90,0);}}
+.v-status{font-size:0.75rem;color:var(--text2);flex:1;font-family:var(--mono);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.v-transcript{font-size:0.75rem;font-family:var(--mono);color:var(--accent3);background:var(--surface3);padding:4px 10px;border-radius:6px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none;}
+.pfx-chip{font-size:0.68rem;font-family:var(--mono);padding:3px 8px;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;color:var(--text2);flex-shrink:0;}
+.pfx-chip span{color:var(--accent3);font-weight:700;}
+.setup-toggle-btn{display:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0;}
+
+/* TOOLBAR */
+.matric-toolbar{padding:5px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;min-height:40px;}
+.tsep{width:1px;height:20px;background:var(--border);}
+
+/* TABLE */
+.table-wrap{flex:1;overflow-y:auto;position:relative;}
+table{width:100%;border-collapse:collapse;}
+thead{position:sticky;top:0;z-index:10;}
+thead tr{background:var(--surface2);}
+th{padding:8px 10px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);border-bottom:1px solid var(--border);text-align:left;}
+th:first-child{width:40px;text-align:center;}
+td{padding:6px 10px;border-bottom:1px solid var(--border);font-size:0.8rem;vertical-align:middle;background:var(--bg);transition:background .1s;}
+tr:hover td{background:var(--surface);}
+tr.active-row td{background:var(--surface3)!important;box-shadow:inset 2px 0 0 var(--accent);}
+tr.duplicate td{background:var(--dupe-bg)!important;border-bottom:1px solid var(--dupe-border);}
+tr.duplicate .exam-code-cell{color:var(--dupe)!important;}
+.row-num{font-family:var(--mono);font-size:0.68rem;color:var(--text3);text-align:center;}
+.exam-code-cell{font-family:var(--mono);font-weight:700;color:var(--accent3);font-size:0.8rem;}
+.dupe-badge{display:inline-block;font-size:0.6rem;font-weight:700;background:var(--dupe);color:#000;padding:1px 5px;border-radius:4px;margin-left:4px;vertical-align:middle;}
+.matric-input{background:transparent;border:none;outline:none;font-family:var(--mono);font-size:0.8rem;color:var(--text);width:100%;padding:2px 0;}
+.matric-input:focus{color:var(--accent);}
+.matric-input.empty{color:var(--text3);}
+td:nth-child(3){width:95px;}
+.act-cell{display:flex;align-items:center;gap:3px;}
+.tbtn{width:26px;height:26px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:var(--text3);display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.tbtn:hover{background:var(--surface3);color:var(--text);}
+.tbtn.d:hover{color:var(--red);}
+
+/* DONE BAR */
+.done-bar{padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+
+/* FILES */
+#page-files{flex-direction:column;}
+.files-top{padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+.path-crumb{font-size:0.78rem;font-family:var(--mono);display:flex;align-items:center;gap:5px;flex:1;flex-wrap:wrap;}
+.crumb{cursor:pointer;color:var(--accent);}
+.crumb:hover{text-decoration:underline;}
+.crumb-sep{color:var(--text3);}
+.files-body{flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-content:start;}
+.file-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:all .2s;position:relative;user-select:none;-webkit-tap-highlight-color:transparent;}
+.file-card:hover{border-color:var(--border2);background:var(--surface2);}
+.file-card.selected{border-color:var(--accent);background:var(--accent-dim);box-shadow:0 0 12px rgba(0,212,255,0.12);}
+.file-icon{font-size:28px;margin-bottom:8px;}
+.file-name{font-size:0.75rem;font-weight:600;color:var(--text);word-break:break-word;margin-bottom:3px;}
+.file-meta{font-size:0.65rem;color:var(--text3);font-family:var(--mono);}
+.file-check{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;}
+.file-card.selected .file-check{background:var(--accent);border-color:var(--accent);color:#000;}
+.btn-group{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border2);}
+.btn-group .btn{border-radius:0;border:none;padding:6px 11px;font-size:0.72rem;}
+.btn-group .btn.active{background:var(--surface3);color:var(--accent);}
+
+/* LOOKUP */
+#page-lookup{flex-direction:column;overflow-y:auto;}
+.lookup-body{padding:20px;display:flex;flex-direction:column;gap:16px;max-width:680px;width:100%;margin:0 auto;}
+.lookup-search-row{display:flex;gap:8px;align-items:stretch;}
+.lookup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;}
+.lookup-title{font-size:1rem;font-weight:700;color:var(--accent);}
+.lookup-tbl{width:100%;border-collapse:collapse;font-size:0.8rem;}
+.lookup-tbl th{padding:6px 10px;font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--text3);border-bottom:1px solid var(--border);text-align:left;}
+.lookup-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);}
+
+/* SETTINGS */
+#page-settings{flex-direction:column;overflow-y:auto;}
+.settings-body{padding:20px;display:flex;flex-direction:column;gap:14px;max-width:560px;width:100%;margin:0 auto;}
+.set-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:12px;}
+.set-title{font-size:0.62rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent);}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;}
+.set-label{font-size:0.82rem;color:var(--text);}
+.set-desc{font-size:0.68rem;color:var(--text3);margin-top:2px;}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.ttrack{position:absolute;inset:0;background:var(--surface3);border-radius:11px;cursor:pointer;transition:background .2s;border:1px solid var(--border2);}
+.ttrack::after{content:'';position:absolute;width:16px;height:16px;background:var(--text3);border-radius:50%;top:2px;left:2px;transition:.2s;}
+.toggle input:checked+.ttrack{background:var(--accent);border-color:var(--accent);}
+.toggle input:checked+.ttrack::after{transform:translateX(18px);background:#030810;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface2);border:1px solid var(--border2);border-radius:16px;padding:22px;max-width:440px;width:100%;box-shadow:var(--shadow),0 0 40px rgba(0,212,255,0.06);display:flex;flex-direction:column;gap:14px;animation:modal-in .2s ease;}
+@keyframes modal-in{from{transform:scale(.95);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal-title{font-size:1rem;font-weight:700;color:var(--text);}
+.modal-body{font-size:0.82rem;color:var(--text2);line-height:1.55;white-space:pre-line;}
+.modal-input-area{display:flex;flex-direction:column;gap:8px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:2px;flex-wrap:wrap;}
+
+/* CTX MENU */
+.ctx-menu{position:fixed;z-index:999;background:var(--surface3);border:1px solid var(--border2);border-radius:10px;padding:4px 0;min-width:160px;box-shadow:var(--shadow);display:none;}
+.ctx-menu.open{display:block;}
+.ctx-item{padding:8px 14px;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s;color:var(--text2);}
+.ctx-item:hover{background:var(--surface4);color:var(--text);}
+.ctx-item.danger{color:var(--red);}
+.ctx-item.danger:hover{background:var(--red-dim);}
+.ctx-sep{height:1px;background:var(--border);margin:3px 0;}
+
+/* TOAST */
+#toasts{position:fixed;bottom:70px;right:14px;z-index:2000;display:flex;flex-direction:column;gap:7px;}
+.toast{background:var(--surface3);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;font-size:0.78rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px;animation:toast-in .22s ease;max-width:300px;transition:opacity .3s;}
+@keyframes toast-in{from{transform:translateX(30px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+.toast.success{border-color:var(--green);box-shadow:0 0 18px rgba(57,255,126,0.12);}
+.toast.error{border-color:var(--red);}
+.toast.warn{border-color:var(--orange);}
+
+/* EMPTY */
+.empty-state{padding:50px 20px;text-align:center;color:var(--text3);}
+.empty-state .ei{font-size:40px;margin-bottom:12px;}
+.empty-state p{font-size:0.85rem;line-height:1.5;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* WELCOME OVERLAY */
+#welcomeOverlay{position:fixed;inset:0;z-index:3000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+#welcomeOverlay.dismissing{animation:welcome-out .4s ease forwards;}
+@keyframes welcome-out{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-30px);}}
+.welcome-box{max-width:500px;width:100%;display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;}
+.welcome-logo{display:flex;align-items:center;gap:10px;font-size:2rem;font-weight:700;}
+.welcome-logo .logo-accent{color:var(--accent);}
+.welcome-logo .logo-pill{font-size:0.72rem;padding:3px 10px;}
+.welcome-subtitle{font-size:0.9rem;color:var(--accent2);font-weight:600;letter-spacing:0.3px;}
+.welcome-desc{font-size:0.82rem;color:var(--text2);line-height:1.65;max-width:420px;}
+.welcome-features{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;}
+.welcome-feat{display:flex;align-items:center;gap:12px;text-align:left;}
+.welcome-feat-icon{font-size:22px;width:36px;text-align:center;flex-shrink:0;}
+.welcome-feat-text{font-size:0.8rem;color:var(--text2);line-height:1.45;}
+.welcome-feat-text strong{color:var(--text);display:block;font-size:0.82rem;}
+.welcome-start-btn{padding:13px 40px;font-size:1rem;font-weight:700;border-radius:10px;border:none;cursor:pointer;background:var(--accent);color:#030810;font-family:var(--font);transition:all .2s;letter-spacing:0.2px;}
+.welcome-start-btn:hover{filter:brightness(1.15);box-shadow:0 0 24px rgba(0,212,255,0.4);}
+.welcome-copy{font-size:0.65rem;color:var(--text3);font-family:var(--mono);}
+
+/* FILES LIST VIEW */
+.files-body.list-view{grid-template-columns:1fr;gap:4px;}
+.files-body.list-view .file-card{display:flex;flex-direction:row;align-items:center;gap:12px;padding:9px 12px;}
+.files-body.list-view .file-icon{font-size:18px;margin-bottom:0;flex-shrink:0;}
+.files-body.list-view .file-name{flex:1;font-size:0.8rem;margin-bottom:0;}
+.files-body.list-view .file-meta{font-size:0.7rem;white-space:nowrap;}
+.files-body.list-view .file-check{position:static;flex-shrink:0;order:-1;}
+
+/* COPYRIGHT FOOTER */
+.copyright-bar{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  height:24px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  font-size:0.6rem;font-family:var(--mono);
+  color:var(--text3);
+  letter-spacing:0.4px;
+  user-select:none;
+  z-index:50;
+}
+.copyright-bar .cr-name{color:var(--accent);font-weight:700;}
+.nav-copyright{
+  font-size:0.58rem;font-family:var(--mono);color:var(--text3);
+  letter-spacing:0.3px;white-space:nowrap;
+}
+.nav-copyright .cr-name{color:var(--accent2);}
+@media(max-width:700px){
+  .copyright-bar{display:none;}
+  .nav-copyright{display:none;}
+  .bottom-nav{height:calc(var(--bot-h) + 18px);}
+  .bnav-copyright{
+    position:absolute;bottom:2px;left:0;right:0;
+    text-align:center;font-size:0.54rem;font-family:var(--mono);
+    color:var(--text3);letter-spacing:0.3px;pointer-events:none;
+  }
+  .bnav-copyright .cr-name{color:var(--accent2);}
+}
+
+/* MOBILE */
+@media(max-width:700px){
+  html{font-size:13px;}
+  .nav-center{display:none;}
+  .nav-right .save-badge span{display:none;}
+  .bottom-nav{display:block;}
+  body{padding-bottom:var(--bot-h);}
+  #page-builder{flex-direction:column;}
+  .setup-panel{width:100%;max-height:50dvh;border-right:none;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .setup-panel.collapsed{display:none;}
+  .matric-area{flex:1;}
+  .setup-toggle-btn{display:flex;}
+  .files-body{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));}
+  #page-settings,#page-lookup{padding-bottom:10px;}
+  #toasts{bottom:calc(var(--bot-h) + 10px);}
+  .modal-actions{justify-content:stretch;}
+  .modal-actions .btn{flex:1;}
+}
+
+/* WELCOME */
+#welcomeOverlay{position:fixed;inset:0;z-index:3000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;transition:opacity .35s;}
+.welcome-box{background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;max-width:490px;width:100%;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow),0 0 60px rgba(0,212,255,0.08);animation:modal-in .35s ease;}
+.welcome-box .welcome-logo{font-size:2rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.welcome-subtitle{font-size:0.7rem;font-family:var(--mono);color:var(--text3);letter-spacing:0.3px;}
+.welcome-box .welcome-desc{font-size:0.84rem;color:var(--text2);line-height:1.65;}
+.welcome-features{display:flex;flex-direction:column;gap:7px;}
+.welcome-feat{display:flex;align-items:flex-start;gap:10px;background:var(--surface3);border-radius:8px;padding:9px 11px;}
+.welcome-feat-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.welcome-feat-text{font-size:0.8rem;color:var(--text2);line-height:1.5;}
+.welcome-feat-text strong{display:block;color:var(--text);margin-bottom:1px;}
+.welcome-start-btn{padding:12px 20px;border-radius:10px;border:none;cursor:pointer;font-family:var(--font);font-weight:700;font-size:0.95rem;background:var(--accent);color:#030810;transition:all .18s;letter-spacing:0.3px;}
+.welcome-start-btn:hover{filter:brightness(1.15);box-shadow:0 0 22px rgba(0,212,255,0.4);}
+.welcome-copy{font-size:0.62rem;font-family:var(--mono);color:var(--text3);text-align:center;}
+
+/* FILES LIST VIEW */
+.files-body.list-view{grid-template-columns:1fr !important;}
+.files-body.list-view .file-card{flex-direction:row;align-items:center;gap:10px;padding:9px 14px;}
+.files-body.list-view .file-icon{font-size:20px;margin-bottom:0;flex-shrink:0;}
+.files-body.list-view .file-name{flex:1;margin-bottom:0;}
+.files-body.list-view .file-meta{flex-shrink:0;white-space:nowrap;}
+.files-body.list-view .file-check{position:static;flex-shrink:0;order:-1;}
+.view-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border2);background:var(--surface3);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;}
+.view-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
+/* RECYCLE BIN */
+.bin-count{display:inline-block;background:var(--red);color:#fff;font-size:0.6rem;font-family:var(--mono);font-weight:700;padding:0 5px;border-radius:10px;margin-left:4px;min-width:16px;text-align:center;vertical-align:middle;}
+.bin-count:empty{display:none;}
+.bin-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);}
+.bin-row-main{flex:1;min-width:0;}
+.bin-row-name{font-size:0.82rem;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bin-row-sub{font-size:0.68rem;color:var(--text3);font-family:var(--mono);margin-top:2px;}
+.bin-row-sub .days-left{color:var(--orange);font-weight:700;}
+.bin-row-sub .days-left.soon{color:var(--red);}
+.bin-actions{display:flex;gap:4px;flex-shrink:0;}
+.btn-bin-header{background:linear-gradient(135deg,var(--red-dim),rgba(255,60,90,0.2));color:var(--red);border:1px solid rgba(255,60,90,0.35);padding:5px 10px;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s;}
+.btn-bin-header:hover{background:var(--red);color:#fff;}
+
+/* FILE META — lemon green */
+.file-meta{color:#c8ff00 !important;font-family:var(--mono);font-size:0.65rem;}
+
+/* COLORFUL IMPORT BUTTON */
+.btn-import{background:linear-gradient(135deg,#7b61ff 0%,#00d4ff 50%,#39ff7e 100%);color:#030810;border:none;font-weight:700;}
+.btn-import:hover{filter:brightness(1.12);box-shadow:0 0 18px rgba(0,212,255,0.4);}
+
+/* OVERVIEW PAGE */
+#page-overview{flex-direction:column;overflow-y:auto;}
+.overview-body{padding:18px;display:flex;flex-direction:column;gap:16px;max-width:900px;width:100%;margin:0 auto;}
+.ov-greeting{font-size:1.15rem;font-weight:700;color:var(--text);}
+.ov-greeting span{color:var(--accent);}
+.ov-sub{font-size:0.78rem;color:var(--text2);margin-top:3px;}
+.ov-section{font-size:0.6rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.ov-section::after{content:'';flex:1;height:1px;background:var(--border);}
+.ov-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+.ov-kpi{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 12px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;}
+.ov-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.ov-kpi.c1::before{background:var(--accent);}
+.ov-kpi.c2::before{background:var(--green);}
+.ov-kpi.c3::before{background:var(--accent2);}
+.ov-kpi.c4::before{background:var(--accent3);}
+.ov-kpi.c5::before{background:var(--red);}
+.ov-kpi-n{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--text);}
+.ov-kpi-l{font-size:0.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;}
+.ov-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.ov-card-head{padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.75rem;font-weight:700;color:var(--text2);display:flex;align-items:center;justify-content:space-between;}
+.ov-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+.ov-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.78rem;}
+.ov-row:last-child{border-bottom:none;}
+.ov-row-icon{font-size:16px;flex-shrink:0;}
+.ov-row-main{flex:1;min-width:0;}
+.ov-row-title{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ov-row-sub{font-size:0.68rem;color:var(--text3);font-family:var(--mono);}
+.ov-row-badge{font-size:0.65rem;font-family:var(--mono);padding:2px 7px;border-radius:5px;flex-shrink:0;}
+.badge-warn{background:rgba(255,149,0,0.15);color:var(--orange);border:1px solid rgba(255,149,0,0.3);}
+.badge-ok{background:rgba(57,255,126,0.1);color:var(--green);border:1px solid rgba(57,255,126,0.25);}
+.badge-info{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,212,255,0.3);}
+.ov-pattern-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
+.ov-pattern{background:var(--surface3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;}
+.ov-pattern-key{font-family:var(--mono);font-size:0.78rem;font-weight:700;color:var(--accent3);}
+.ov-pattern-count{font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--text);}
+.ov-pattern-label{font-size:0.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;}
+.ov-empty{padding:28px 14px;text-align:center;color:var(--text3);font-size:0.82rem;}
+.ov-quick-actions{display:flex;gap:8px;flex-wrap:wrap;}
+@media(max-width:700px){.ov-kpi-grid{grid-template-columns:repeat(2,1fr);}.ov-pattern-grid{grid-template-columns:repeat(2,1fr);}}
+/* ─── AUTH SCREEN (online) ─────────────────────── */
+#authScreen{position:fixed;inset:0;z-index:5000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+#authScreen::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 15% 0%,rgba(0,212,255,0.06) 0%,transparent 60%),radial-gradient(ellipse 50% 35% at 85% 100%,rgba(123,97,255,0.07) 0%,transparent 55%);pointer-events:none;}
+.auth-card{position:relative;z-index:1;width:100%;max-width:410px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:30px 26px;animation:auth-in .5s cubic-bezier(.2,.7,.3,1);}
+@keyframes auth-in{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
+.auth-logo{font-size:1.5rem;font-weight:700;display:flex;align-items:center;gap:8px;justify-content:center;}
+.auth-tag{text-align:center;color:var(--text2);font-size:0.78rem;margin-top:6px;margin-bottom:20px;}
+.auth-toggle{display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:18px;}
+.auth-toggle button{flex:1;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-weight:600;font-size:0.78rem;padding:8px;border-radius:7px;cursor:pointer;transition:all .2s;}
+.auth-toggle button.active{background:var(--accent-dim);color:var(--accent);border:1px solid var(--border2);}
+.auth-field{margin-bottom:13px;}
+.auth-field .flabel{font-size:0.72rem;color:var(--text2);margin-bottom:5px;font-weight:600;}
+.auth-pass-wrap{position:relative;}
+.auth-pass-wrap .pass-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text3);font-size:0.95rem;user-select:none;}
+.auth-err{display:none;background:var(--red-dim);border:1px solid var(--red);color:var(--red);font-size:0.75rem;padding:9px 11px;border-radius:8px;margin-bottom:13px;line-height:1.4;}
+.auth-err.show{display:block;}
+.auth-ok{display:none;background:rgba(57,255,126,0.1);border:1px solid var(--green);color:var(--green);font-size:0.75rem;padding:9px 11px;border-radius:8px;margin-bottom:13px;line-height:1.4;}
+.auth-ok.show{display:block;}
+.auth-foot{text-align:center;margin-top:16px;font-size:0.72rem;color:var(--text3);}
+.auth-link{color:var(--accent);cursor:pointer;font-weight:600;}
+.auth-link:hover{text-decoration:underline;}
+.auth-busy{opacity:.6;pointer-events:none;}
+.auth-copy{text-align:center;margin-top:22px;font-size:0.65rem;color:var(--text3);font-family:var(--mono);}
+
+/* user chip + signout in nav */
+.nav-user{display:flex;align-items:center;gap:9px;}
+.user-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 4px 3px 10px;max-width:230px;}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#04121a;flex-shrink:0;}
+.user-meta{display:flex;flex-direction:column;line-height:1.1;overflow:hidden;}
+.user-name{font-size:0.72rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-role{font-size:0.58rem;color:var(--accent);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;}
+.btn-signout{background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;font-size:0.7rem;font-weight:600;padding:5px 10px;cursor:pointer;font-family:var(--font);transition:all .2s;}
+.btn-signout:hover{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+
+/* ─── ADMIN PANEL ──────────────────────────────── */
+.admin-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:16px;max-width:1100px;width:100%;margin:0 auto;}
+.admin-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.admin-title{font-size:1.15rem;font-weight:700;}
+.admin-title span{color:var(--accent2);}
+.admin-sub{font-size:0.78rem;color:var(--text2);margin-top:2px;}
+.admin-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.admin-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 15px;}
+.admin-stat .n{font-size:1.5rem;font-weight:700;color:var(--accent);font-family:var(--mono);}
+.admin-stat .l{font-size:0.68rem;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+.admin-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);}
+.admin-tab{border:none;background:transparent;color:var(--text2);font-family:var(--font);font-weight:600;font-size:0.82rem;padding:9px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+.admin-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.admin-section{display:none;}
+.admin-section.active{display:block;}
+.admin-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.admin-toolbar .search-mini{flex:1;min-width:160px;}
+.admin-table-wrap{border:1px solid var(--border);border-radius:10px;overflow:auto;}
+table.admin-tbl{width:100%;border-collapse:collapse;font-size:0.78rem;min-width:640px;}
+table.admin-tbl th{text-align:left;padding:10px 12px;background:var(--surface3);color:var(--text2);font-weight:600;font-size:0.7rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);position:sticky;top:0;}
+table.admin-tbl td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+table.admin-tbl tr:last-child td{border-bottom:none;}
+table.admin-tbl tr:hover td{background:var(--surface2);}
+.pill{display:inline-block;font-size:0.62rem;font-family:var(--mono);padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;}
+.pill-admin{background:rgba(123,97,255,0.16);color:var(--accent2);border:1px solid rgba(123,97,255,0.5);}
+.pill-user{background:var(--accent-dim);color:var(--accent);border:1px solid var(--border2);}
+.pill-active{background:rgba(57,255,126,0.12);color:var(--green);border:1px solid rgba(57,255,126,0.5);}
+.pill-disabled{background:var(--red-dim);color:var(--red);border:1px solid var(--red);}
+.row-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.mini-btn{border:1px solid var(--border2);background:var(--surface3);color:var(--text2);border-radius:6px;font-size:0.66rem;font-weight:600;padding:4px 8px;cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;}
+.mini-btn:hover{color:var(--text);border-color:var(--accent);}
+.mini-btn.danger:hover{color:var(--red);border-color:var(--red);background:var(--red-dim);}
+.mini-btn.good:hover{color:var(--green);border-color:var(--green);}
+.activity-list{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.activity-item{display:flex;align-items:flex-start;gap:11px;padding:11px 13px;border-bottom:1px solid var(--border);font-size:0.78rem;}
+.activity-item:last-child{border-bottom:none;}
+.activity-item:hover{background:var(--surface2);}
+.act-icon{width:30px;height:30px;border-radius:8px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;}
+.act-main{flex:1;line-height:1.4;}
+.act-who{font-weight:600;color:var(--text);}
+.act-detail{color:var(--text2);}
+.act-time{font-size:0.66rem;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
+.admin-empty{padding:30px;text-align:center;color:var(--text3);font-size:0.82rem;}
+.admin-note{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent3);border-radius:8px;padding:11px 13px;font-size:0.74rem;color:var(--text2);line-height:1.5;}
+.admin-note strong{color:var(--text);}
+.cred-box{background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:12px;font-family:var(--mono);font-size:0.76rem;color:var(--text);margin:6px 0;word-break:break-all;}
+.cred-box .k{color:var(--text3);}
+@media (max-width:760px){
+  .admin-body{padding:12px;}
+  .user-meta{display:none;}
+  .user-chip{padding:3px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ LOGIN / AUTH SCREEN ════════ -->
+<div id="authScreen">
+  <div class="auth-card" id="authCard">
+    <div class="auth-logo"><span>Exam<span class="logo-accent">Code</span></span><span class="logo-pill">UBa</span></div>
+    <div class="auth-tag">University of Bamenda — Exam Management System</div>
+
+    <div id="authConfigWarn" class="auth-err" style="display:block;">Loading…</div>
+
+    <div id="authForms" style="display:none;">
+      <div class="auth-toggle">
+        <button id="tabSignin" class="active" onclick="authTab('signin')">Sign In</button>
+        <button id="tabSetup" onclick="authTab('setup')">First-time Setup</button>
+      </div>
+
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-ok" id="authOk"></div>
+
+      <!-- SIGN IN -->
+      <div id="formSignin">
+        <div class="auth-field">
+          <div class="flabel">Email</div>
+          <input class="finput" id="siEmail" type="email" autocomplete="username" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('siPass').focus()">
+        </div>
+        <div class="auth-field">
+          <div class="flabel">Password</div>
+          <div class="auth-pass-wrap">
+            <input class="finput" id="siPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')appSignIn()">
+            <span class="pass-eye" onclick="togglePass('siPass',this)">&#128065;</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="siBtn" onclick="appSignIn()">Sign In</button>
+        <div class="auth-foot"><span class="auth-link" onclick="appForgot()">Forgot password?</span></div>
+      </div>
+
+      <!-- FIRST-TIME OWNER SETUP -->
+      <div id="formSetup" style="display:none;">
+        <div class="admin-note" style="margin-bottom:14px;">This creates the <strong>super-admin (owner)</strong> account. It only works for the owner email configured in the app. All other accounts are created by the owner from the Admin panel.</div>
+        <div class="auth-field">
+          <div class="flabel">Display Name</div>
+          <input class="finput" id="suName" placeholder="e.g. Patryll Gabsa">
+        </div>
+        <div class="auth-field">
+          <div class="flabel">Owner Email</div>
+          <input class="finput" id="suEmail" type="email" autocomplete="username" placeholder="owner@example.com">
+        </div>
+        <div class="auth-field">
+          <div class="flabel">Create Password</div>
+          <div class="auth-pass-wrap">
+            <input class="finput" id="suPass" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+            <span class="pass-eye" onclick="togglePass('suPass',this)">&#128065;</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="suBtn" onclick="appSetupOwner()">Create Owner Account</button>
+      </div>
+    </div>
+
+    <div class="auth-copy">&copy; GABSA PATRYLL NYAMAH</div>
+  </div>
+</div>
+
+
+<nav>
+  <div class="nav-logo"><span>Exam<span class="logo-accent">Code</span></span><span class="logo-pill">UBa</span></div>
+  <div class="nav-center">
+    <button class="nav-tab active" data-page="overview" onclick="switchPage('overview')">&#128200; Overview</button>
+    <button class="nav-tab" data-page="builder" onclick="switchPage('builder')">&#9999;&#65039; Builder</button>
+    <button class="nav-tab" data-page="files" onclick="switchPage('files')">&#128194; Files</button>
+    <button class="nav-tab" data-page="lookup" onclick="switchPage('lookup')">&#128269; Lookup</button>
+    <button class="nav-tab" data-page="settings" onclick="switchPage('settings')">&#9881;&#65039; Settings</button>
+    <button class="nav-tab admin-only" data-page="admin" onclick="switchPage('admin')" style="display:none;">&#128737;&#65039; Admin</button>
+  </div>
+  <div class="nav-right">
+    <div class="save-badge"><div class="save-dot"></div><span id="save-label">Synced</span></div>
+    <div class="nav-user">
+      <div class="user-chip">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <div class="user-meta"><span class="user-name" id="userName">—</span><span class="user-role" id="userRole">—</span></div>
+      </div>
+      <button class="btn-signout" onclick="appSignOut()">Sign out</button>
+    </div>
+  </div>
+</nav>
+
+<div class="app-body">
+
+<!-- OVERVIEW -->
+<div id="page-overview" class="page active">
+  <div class="overview-body" id="overviewBody">
+    <div>
+      <div class="ov-greeting">Welcome back to <span>ExamCode</span> Builder</div>
+      <div class="ov-sub" id="ovDateTime"></div>
+    </div>
+    <div class="ov-quick-actions">
+      <button class="btn btn-primary btn-sm" onclick="switchPage('builder')">&#9999;&#65039; Open Builder</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchPage('files')">&#128194; My Files</button>
+      <button class="btn btn-ghost btn-sm" onclick="switchPage('lookup')">&#128269; Lookup Student</button>
+    </div>
+    <div>
+      <div class="ov-section">System Overview</div>
+      <div class="ov-kpi-grid" id="ovKpiGrid"></div>
+    </div>
+    <div>
+      <div class="ov-section">Matricule Patterns (Students per Level)</div>
+      <div class="ov-pattern-grid" id="ovPatternGrid"></div>
+    </div>
+    <div>
+      <div class="ov-section">Recent Files</div>
+      <div class="ov-card"><div class="ov-card-body" id="ovRecentFiles"></div></div>
+    </div>
+    <div>
+      <div class="ov-section">In-Progress Session</div>
+      <div class="ov-card"><div class="ov-card-body" id="ovInProgress"></div></div>
+    </div>
+    <div>
+      <div class="ov-section">Course Summary</div>
+      <div class="ov-card"><div class="ov-card-body" id="ovCourses"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- BUILDER -->
+<div id="page-builder" class="page">
+  <div class="setup-panel" id="setupPanel">
+    <div class="sec-head">Course Setup</div>
+    <div class="fgrp">
+      <div class="flabel">Course Code</div>
+      <div class="input-wrap">
+        <input class="finput" id="courseCode" placeholder="e.g. CUCH2101" autocomplete="off" autocapitalize="characters" oninput="onCourseCodeInput(this.value)" onblur="hideSuggestions()" onkeydown="acKeydown(event)">
+        <div class="ac-list" id="acList"></div>
+      </div>
+    </div>
+    <div class="fgrp">
+      <div class="flabel">Course Title</div>
+      <input class="finput" id="courseTitle" placeholder="e.g. Functional Chinese" autocapitalize="words" oninput="onCourseTitleInput(this.value)">
+    </div>
+    <div class="sec-head">Exam Code Config</div>
+    <div class="row2">
+      <div class="fgrp"><div class="flabel">Prefix</div><input class="finput" id="examPrefix" placeholder="UT" maxlength="6" autocapitalize="characters" oninput="this.value=this.value.toUpperCase();updatePreview()"></div>
+      <div class="fgrp"><div class="flabel"># Scripts</div><input class="finput" id="numScripts" type="number" min="1" max="9999" placeholder="100" oninput="updatePreview()"></div>
+    </div>
+    <div class="fgrp"><div class="flabel">Preview</div><div class="preview-box" id="previewBox">---</div></div>
+    <button class="btn btn-primary btn-full" onclick="generateTable()">&#9654; Generate Table</button>
+    <div class="sec-head">Matricule Prefix</div>
+    <div class="fgrp">
+      <div class="flabel">Common First Characters</div>
+      <input class="finput" id="matricPrefix" placeholder="UBa25R0" maxlength="14" oninput="updatePreview()">
+    </div>
+    <div style="font-size:0.68rem;color:var(--text3);line-height:1.4;">Speak only the last digits; prefix prepended automatically.</div>
+    <div class="sec-head">Voice</div>
+    <div class="fgrp">
+      <div class="flabel">Silence Timeout</div>
+      <div class="sil-row">
+        <input type="range" min="100" max="4000" step="50" id="silenceSlider" value="1000" oninput="updateSilenceLabel()">
+        <div class="sil-val" id="silenceVal">1.0s</div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="applySilenceChange()" style="margin-top:4px">Apply Changes</button>
+    </div>
+    <div class="sec-head">Stats</div>
+    <div class="stats-grid">
+      <div class="stat-item"><div class="stat-n" id="st-total">0</div><div class="stat-l">Total</div></div>
+      <div class="stat-item"><div class="stat-n ok" id="st-filled">0</div><div class="stat-l">Filled</div></div>
+      <div class="stat-item"><div class="stat-n warn" id="st-dupes">0</div><div class="stat-l">Dupes</div></div>
+      <div class="stat-item"><div class="stat-n" id="st-empty">0</div><div class="stat-l">Empty</div></div>
+    </div>
+    <div class="sec-head">Export</div>
+    <button class="btn btn-success btn-full" onclick="exportCSV()">&#11015; Export CSV</button>
+    <button class="btn btn-ghost btn-full btn-sm" style="margin-top:4px" onclick="saveToFiles()">&#128190; Save to Files</button>
+  </div>
+
+  <div class="matric-area">
+    <div class="voice-bar">
+      <button class="setup-toggle-btn" onclick="toggleSetupPanel()">&#9776;</button>
+      <button class="mic-btn" id="micBtn" onclick="toggleVoice()">&#127908;</button>
+      <div class="v-status" id="vStatus">Tap mic to start voice input</div>
+      <div class="v-transcript" id="vTranscript"></div>
+      <div class="pfx-chip">Pfx: <span id="pfxChipTxt">--</span></div>
+    </div>
+    <div class="matric-toolbar">
+      <button class="btn btn-ghost btn-sm" onclick="shiftSelectedRows('up')">&#8593; Up</button>
+      <button class="btn btn-ghost btn-sm" onclick="shiftSelectedRows('down')">&#8595; Down</button>
+      <div class="tsep"></div>
+      <button class="btn btn-ghost btn-sm" onclick="insertRowBelow()">+ Row</button>
+      <button class="btn btn-ghost btn-sm" onclick="deleteSelectedRows()">&#128465;</button>
+      <div class="tsep"></div>
+      <button class="btn btn-ghost btn-sm" onclick="clearSelectedRows()">&#10005; Clear</button>
+      <div class="tsep"></div>
+      <span style="font-size:0.68rem;color:var(--text3);font-family:var(--mono);">Sel: <span id="selCount">0</span></span>
+    </div>
+    <div class="table-wrap" id="tableWrap">
+      <div class="empty-state"><div class="ei">&#128203;</div><p>Fill in course details on the left,<br>then click <strong>Generate Table</strong>.</p></div>
+    </div>
+    <div class="done-bar" id="doneBar" style="display:none;">
+      <button class="btn btn-orange" onclick="finishDocument()">&#10003; Done - Close &amp; New</button>
+      <span style="font-size:0.72rem;color:var(--text3);">Saves and resets for next course</span>
+    </div>
+  </div>
+</div>
+
+<!-- FILES -->
+<div id="page-files" class="page">
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="files-top">
+      <div class="path-crumb" id="pathCrumb"><span class="crumb" onclick="navToRoot()">&#128193; My Files</span></div>
+      <div class="btn-group">
+        <button class="btn active" id="sortNameBtn" onclick="sortFiles('name')">Name</button>
+        <button class="btn" id="sortDateBtn" onclick="sortFiles('date')">Date</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn" id="viewTilesBtn" title="Tiles view" onclick="setFilesView('tiles')">&#8861;</button>
+        <button class="btn" id="viewListBtn" title="List view" onclick="setFilesView('list')">&#128203;</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="selAllBtn" onclick="toggleSelectAll()">&#9745; All</button>
+      <button class="btn btn-ghost btn-sm" onclick="createFolder()">+ Folder</button>
+      <button class="btn btn-import btn-sm" onclick="importFile()">&#11014; Import CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadSelected()">&#11015;</button>
+      <button class="btn btn-ghost btn-sm" onclick="moveSelected()">&#8594; Move</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteSelected()">&#128465; Delete</button>
+      <button class="btn-bin-header" id="binBtn" onclick="showBin()">&#128465; Bin <span class="bin-count" id="binCount"></span></button>
+    </div>
+    <div class="files-body" id="filesGrid"></div>
+  </div>
+</div>
+
+<!-- LOOKUP -->
+<div id="page-lookup" class="page">
+  <div class="lookup-body">
+    <div>
+      <div style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">Student Lookup</div>
+      <div style="font-size:0.8rem;color:var(--text2);">Enter a matricule to find all courses and exam codes across all saved files.</div>
+    </div>
+    <div class="lookup-search-row">
+      <input class="finput" id="lookupInput" placeholder="e.g. UBa25R0357" style="flex:1;" onkeydown="if(event.key==='Enter')doLookup()">
+      <button class="btn btn-primary" onclick="doLookup()">Search</button>
+    </div>
+    <div id="lookupResult"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="page-settings" class="page">
+  <div class="settings-body">
+    <div class="set-card">
+      <div class="set-title">Voice &amp; Input</div>
+      <div class="set-row">
+        <div><div class="set-label">Auto-advance after silence</div><div class="set-desc">Move to next row after silence timeout</div></div>
+        <label class="toggle"><input type="checkbox" id="set-autoAdvance" checked onchange="saveSetting()"><div class="ttrack"></div></label>
+      </div>
+      <div class="set-row">
+        <div><div class="set-label">Auto-prepend prefix</div><div class="set-desc">Prepend common matricule prefix to voice input</div></div>
+        <label class="toggle"><input type="checkbox" id="set-autoPrefix" checked onchange="saveSetting()"><div class="ttrack"></div></label>
+      </div>
+    </div>
+    <div class="set-card">
+      <div class="set-title">Auto-Save</div>
+      <div class="set-row">
+        <div><div class="set-label">Auto-save enabled</div><div class="set-desc">Save every 30s to recover from shutdowns</div></div>
+        <label class="toggle"><input type="checkbox" id="set-autosave" checked onchange="saveSetting()"><div class="ttrack"></div></label>
+      </div>
+    </div>
+    <div class="set-card">
+      <div class="set-title">Course Dictionary</div>
+      <div id="dictList" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;"></div>
+      <button class="btn btn-primary btn-sm btn-full" style="margin-top:4px" onclick="addDictEntry()">+ Add Entry</button>
+      <button class="btn btn-ghost btn-sm btn-full" style="margin-top:4px" onclick="clearDictionary()">&#128465; Clear Dictionary</button>
+    </div>
+    <div class="set-card">
+      <div class="set-title">Danger Zone</div>
+      <button class="btn btn-danger btn-sm" onclick="nukeStorage()">&#9888; Clear ALL Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN (super-admin only) -->
+<div id="page-admin" class="page">
+  <div class="admin-body">
+    <div class="admin-head">
+      <div>
+        <div class="admin-title">&#128737;&#65039; Admin <span>Console</span></div>
+        <div class="admin-sub">Manage user accounts, access and activity across the whole app.</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="adminCreateUserDialog()">&#43; Create User</button>
+    </div>
+
+    <div class="admin-stat-grid" id="adminStats"></div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" id="atUsers" onclick="adminTab('users')">Users</button>
+      <button class="admin-tab" id="atActivity" onclick="adminTab('activity')">Activity Log</button>
+    </div>
+
+    <!-- USERS -->
+    <div class="admin-section active" id="adminUsers">
+      <div class="admin-toolbar">
+        <input class="finput search-mini" id="adminUserSearch" placeholder="Search by name or email…" oninput="renderAdminUsers()">
+        <button class="btn btn-ghost btn-sm" onclick="adminRefresh()">&#8635; Refresh</button>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-tbl">
+          <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Documents</th><th>Last Active</th><th>Actions</th></tr></thead>
+          <tbody id="adminUserRows"><tr><td colspan="6" class="admin-empty">Loading users…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="admin-note" style="margin-top:12px;">
+        <strong>Password management:</strong> you set an initial password when creating a user. To change a forgotten password, use <em>Reset</em> to email the user a secure reset link. <strong>Disable</strong> instantly blocks a user from signing in or touching any data, without deleting their work.
+      </div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div class="admin-section" id="adminActivity">
+      <div class="admin-toolbar">
+        <input class="finput search-mini" id="adminActSearch" placeholder="Filter activity…" oninput="renderAdminActivity()">
+        <button class="btn btn-ghost btn-sm" onclick="adminRefresh()">&#8635; Refresh</button>
+      </div>
+      <div class="activity-list" id="adminActivityList"><div class="admin-empty">Loading activity…</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-body -->
+
+<!-- COPYRIGHT FOOTER (desktop) -->
+<div class="copyright-bar">
+  &copy; All rights reserved &mdash; <span class="cr-name">GABSA PATRYLL NYAMAH</span>
+</div>
+
+<div class="bottom-nav">
+  <div class="bottom-nav-inner" style="position:relative;">
+    <button class="bnav-tab active" id="bt-overview" onclick="switchPage('overview')"><div class="bi">&#128200;</div>Overview</button>
+    <button class="bnav-tab" id="bt-builder" onclick="switchPage('builder')"><div class="bi">&#9999;&#65039;</div>Builder</button>
+    <button class="bnav-tab" id="bt-files" onclick="switchPage('files')"><div class="bi">&#128194;</div>Files</button>
+    <button class="bnav-tab" id="bt-lookup" onclick="switchPage('lookup')"><div class="bi">&#128269;</div>Lookup</button>
+    <button class="bnav-tab" id="bt-settings" onclick="switchPage('settings')"><div class="bi">&#9881;&#65039;</div>Settings</button>
+    <button class="bnav-tab admin-only" id="bt-admin" onclick="switchPage('admin')" style="display:none;"><div class="bi">&#128737;&#65039;</div>Admin</button>
+    <div class="bnav-copyright">&copy; <span class="cr-name">GABSA PATRYLL NYAMAH</span></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-input-area" id="modalInputArea"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" onclick="ctxRename()">&#9999;&#65039; Rename</div>
+  <div class="ctx-item" onclick="ctxOpen()">&#128194; Open / Edit</div>
+  <div class="ctx-item" onclick="ctxDownload()">&#11015; Download</div>
+  <div class="ctx-item" onclick="ctxMove()">&#8594; Move to Folder</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" onclick="ctxDelete()">&#128465; Delete</div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- WELCOME OVERLAY -->
+<div id="welcomeOverlay">
+  <div class="welcome-box">
+    <div class="welcome-logo">
+      <span>Exam<span class="logo-accent">Code</span></span>
+      <span class="logo-pill">UBa</span>
+    </div>
+    <div class="welcome-subtitle">University of Bamenda &mdash; Exam Management System</div>
+    <div class="welcome-desc">
+      A powerful tool for building and managing exam code sheets. Assign matricule numbers to exam codes quickly using voice input, manage files, and look up students across all courses.
+    </div>
+    <div class="welcome-features">
+      <div class="welcome-feat">
+        <div class="welcome-feat-icon">&#127908;</div>
+        <div class="welcome-feat-text"><strong>Voice Input</strong>Speak matricule numbers hands-free — auto-advances to the next row after each entry.</div>
+      </div>
+      <div class="welcome-feat">
+        <div class="welcome-feat-icon">&#128196;</div>
+        <div class="welcome-feat-text"><strong>Generate Sheets</strong>Instantly create numbered exam code tables for any course and export as CSV.</div>
+      </div>
+      <div class="welcome-feat">
+        <div class="welcome-feat-icon">&#128269;</div>
+        <div class="welcome-feat-text"><strong>Student Lookup</strong>Search any matricule across all saved files to find a student's exam codes.</div>
+      </div>
+      <div class="welcome-feat">
+        <div class="welcome-feat-icon">&#128194;</div>
+        <div class="welcome-feat-text"><strong>File Management</strong>Organise sheets into folders, import CSV files, rename, move and download.</div>
+      </div>
+    </div>
+    <button class="welcome-start-btn" onclick="dismissWelcome()">&#128640; Get Started</button>
+    <div class="welcome-copy">&copy; GABSA PATRYLL NYAMAH</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ─── STATE ────────────────────────────────────────
+var rows = [];
+var selectedRows = new Set();
+var activeRowId = null;
+var duplicateIds = new Set();
+var prevDupeCount = 0;
+
+var fsRoot = { name:'root', type:'folder', children:[], id:'root' };
+var curFolderId = 'root';
+var selectedFiles = new Set();
+var ctxTargetId = null;
+var sortMode = 'name';
+
+var recognition        = null;
+var micStream          = null;
+var isListening        = false;
+var recStarted         = false;
+var pendingStart       = false;
+var silenceTimerHandle = null;
+var lastFinalTranscript = '';
+var lastProcessedResultIndex = -1;
+
+var courseDict = {};
+var settings = { autoAdvance:true, autoPrefix:true, autosave:true };
+
+var idCtr = Date.now();
+function genId() { return 'i' + (++idCtr); }
+
+var setupVisible = true;
+var autoSaveDebHandle = null;
+var appliedSilenceMs = 1000;
+var filesView = 'list';
+var _skipTitleCheck = false;
+var recycleBin = [];   // [{id, node, originalParentId, deletedAt}]
+var viewingBin = false;
+
+// ─── ONLINE / AUTH STATE ──────────────────────────
+var currentUser    = null;   // { uid, email }
+var currentProfile = null;   // { displayName, role, disabled, ... }
+var isAdminAccount = false;
+var stateLoaded    = false;   // becomes true once this user's cloud data has loaded
+var adminUsersCache = [];
+var adminActivityCache = [];
+
+// ─── INIT (UI only — data loads after sign-in) ────
+window.addEventListener('load', function() {
+  applySettings();
+  updateStats();
+  updatePreview();
+  updateSilenceLabel();
+  initVoicePermission();
+  checkWelcomeOverlay();
+  // periodic cloud sync (no-op until signed in & loaded; saveToStorage guards itself)
+  setInterval(function() { if (settings.autosave) saveToStorage(); }, 30000);
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#ctxMenu')) closeCtx();
+    if (!e.target.closest('#acList') && !e.target.closest('#courseCode')) hideSuggestions();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeModal(); closeCtx(); }
+  });
+  // Fallback: if the Firebase engine never initialises (offline / blocked), tell the user.
+  setTimeout(function() {
+    if (!window.FB) {
+      var w = document.getElementById('authConfigWarn');
+      if (w) { w.style.display = 'block'; w.classList.add('show'); w.innerHTML = '&#9888;&#65039; Could not reach the server. Check your internet connection and reload the page.'; }
+    }
+  }, 9000);
+});
+
+// ─── PAGE SWITCH ──────────────────────────────────
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  var pg = document.getElementById('page-' + name);
+  if (pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  var dt = document.querySelector('.nav-center .nav-tab[data-page="' + name + '"]');
+  if (dt) dt.classList.add('active');
+  document.querySelectorAll('.bnav-tab').forEach(function(t) { t.classList.remove('active'); });
+  var bt = document.getElementById('bt-' + name);
+  if (bt) bt.classList.add('active');
+  if (name === 'files') renderFilesPage();
+  if (name === 'settings') renderDictList();
+  if (name === 'overview') renderOverview();
+  if (name === 'admin') renderAdmin();
+}
+
+function toggleSetupPanel() {
+  setupVisible = !setupVisible;
+  document.getElementById('setupPanel').classList.toggle('collapsed', !setupVisible);
+}
+
+// ─── STORAGE (Cloud Firestore, per-user) ──────────
+// State is serialized → gzip-compressed → split into ≤~800KB chunks → stored
+// under users/{uid}/state/*. This keeps every Firestore document well under the
+// 1 MiB limit and uses the database quota (1 GiB free), NOT Cloud Storage.
+function buildStatePayload() {
+  return {
+    v: 1,
+    rows: rows,
+    courseDict: courseDict,
+    fsRoot: fsRoot,
+    recycleBin: recycleBin,
+    setup: {
+      courseCode: gv('courseCode'),
+      courseTitle: gv('courseTitle'),
+      examPrefix: gv('examPrefix'),
+      numScripts: gv('numScripts'),
+      matricPrefix: gv('matricPrefix'),
+      silenceSlider: (document.getElementById('silenceSlider') || {}).value || '1000'
+    },
+    settings: settings
+  };
+}
+
+function setSaveLabel(t) { var el = document.getElementById('save-label'); if (el) el.textContent = t; }
+
+function saveToStorage() {
+  // Guard: never write before this user's data has finished loading (would clobber it).
+  if (!currentUser || !stateLoaded || !window.FB) return;
+  try {
+    var payload = JSON.stringify(buildStatePayload());
+    var stats = computeStats();
+    setSaveLabel('Syncing…');
+    window.FB.saveState(payload, stats).then(function(res) {
+      if (res && res.skipped) setSaveLabel('Synced');
+      else setSaveLabel('Synced ' + new Date().toLocaleTimeString());
+    }).catch(function(e) {
+      setSaveLabel('Sync failed');
+      console.warn('cloud save failed', e);
+      toast('Could not sync: ' + (e && e.message ? e.message : 'error'), 'error');
+    });
+  } catch (e) {}
+}
+
+// Apply a payload object (from the cloud) into the live app state.
+function applyLoadedState(d) {
+  try {
+    if (!d) return;
+    if (d.courseDict) courseDict = d.courseDict;
+    if (d.fsRoot) fsRoot = d.fsRoot;
+    if (d.recycleBin) recycleBin = d.recycleBin;
+    if (d.settings) settings = Object.assign({ autoAdvance:true, autoPrefix:true, autosave:true }, d.settings);
+    if (d.setup) {
+      var s = d.setup;
+      if (s.courseCode) document.getElementById('courseCode').value = s.courseCode;
+      if (s.courseTitle) document.getElementById('courseTitle').value = s.courseTitle;
+      if (s.examPrefix) document.getElementById('examPrefix').value = s.examPrefix;
+      if (s.numScripts) document.getElementById('numScripts').value = s.numScripts;
+      if (s.matricPrefix) document.getElementById('matricPrefix').value = s.matricPrefix;
+      if (s.silenceSlider) {
+        document.getElementById('silenceSlider').value = s.silenceSlider;
+        appliedSilenceMs = parseInt(s.silenceSlider) || 1000;
+      }
+    }
+    if (d.rows && d.rows.length > 0) {
+      rows = d.rows;
+      activeRowId = rows[0].id;
+      renderTable();
+      checkDuplicates();
+      document.getElementById('doneBar').style.display = 'flex';
+    }
+    updatePreview();
+    updateSilenceLabel();
+  } catch (e) { console.warn('applyLoadedState error', e); }
+}
+
+function autoSaveDebounced() {
+  clearTimeout(autoSaveDebHandle);
+  autoSaveDebHandle = setTimeout(function() { if (settings.autosave) saveToStorage(); }, 1200);
+}
+
+// ─── HELPERS ──────────────────────────────────────
+function gv(id) {
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function escH(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── SETUP / GENERATION ───────────────────────────
+function updatePreview() {
+  var pre = gv('examPrefix') || '??';
+  var n = parseInt(gv('numScripts')) || 0;
+  var pb = document.getElementById('previewBox');
+  if (pb) pb.textContent = n > 0 ? (pre + '01 to ' + pre + String(n).padStart(Math.max(2, String(n).length), '0')) : (pre + '01 to ...');
+  var chip = document.getElementById('pfxChipTxt');
+  if (chip) chip.textContent = gv('matricPrefix') || '--';
+  autoSaveDebounced();
+}
+
+function generateTable() {
+  var pre = gv('examPrefix');
+  var n = parseInt(gv('numScripts'));
+  if (!pre) { toast('Enter exam code prefix', 'warn'); return; }
+  if (!n || n < 1) { toast('Enter number of scripts', 'warn'); return; }
+  if (rows.length > 0) {
+    showModal('Reset Table?', 'This will clear all existing matricules. Continue?', null, [
+      { label:'Reset', cls:'btn-danger', cb: function() { closeModal(); _buildRows(pre, n); } },
+      { label:'Cancel', cls:'btn-ghost', cb: closeModal }
+    ]);
+    return;
+  }
+  _buildRows(pre, n);
+}
+
+function _buildRows(pre, n) {
+  rows = [];
+  var pad = Math.max(2, String(n).length);
+  for (var i = 1; i <= n; i++) {
+    rows.push({ id: genId(), examCode: pre + String(i).padStart(pad, '0'), matricule: '' });
+  }
+  selectedRows.clear();
+  activeRowId = rows[0] ? rows[0].id : null;
+  renderTable();
+  updateStats();
+  checkDuplicates();
+  toast('Generated ' + n + ' exam codes', 'success');
+  setTimeout(function() { focusRow(activeRowId); }, 80);
+  saveToStorage();
+  var code = gv('courseCode'), title = gv('courseTitle');
+  if (code && title) { courseDict[code] = title; saveToStorage(); }
+  document.getElementById('doneBar').style.display = 'flex';
+}
+
+// ─── TABLE RENDER ─────────────────────────────────
+function renderTable() {
+  var wrap = document.getElementById('tableWrap');
+  if (!wrap) return;
+  if (rows.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="ei">&#128203;</div><p>Fill in course details,<br>then click <strong>Generate Table</strong>.</p></div>';
+    return;
+  }
+  var html = '<table><thead><tr>' +
+    '<th><input type="checkbox" id="chkAll" onchange="toggleAllRows(this.checked)" style="accent-color:var(--accent)"></th>' +
+    '<th>#</th><th>Exam Code</th><th>Matricule</th><th>Actions</th>' +
+    '</tr></thead><tbody>';
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var active = r.id === activeRowId;
+    var dupe = duplicateIds.has(r.id);
+    var sel = selectedRows.has(r.id);
+    html += '<tr id="tr-' + r.id + '" class="' + (active ? 'active-row' : '') + ' ' + (dupe ? 'duplicate' : '') + '">' +
+      '<td><input type="checkbox" ' + (sel ? 'checked' : '') + ' onchange="toggleRowSel(\'' + r.id + '\',this.checked)" style="accent-color:var(--accent)"></td>' +
+      '<td class="row-num">' + (i + 1) + '</td>' +
+      '<td class="exam-code-cell">' + escH(r.examCode) + (dupe ? '<span class="dupe-badge">DUPE</span>' : '') + '</td>' +
+      '<td><input class="matric-input' + (r.matricule ? '' : ' empty') + '" id="inp-' + r.id + '"' +
+        ' value="' + escH(r.matricule) + '" placeholder="--"' +
+        ' inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off"' +
+        ' oninput="onMatricInput(\'' + r.id + '\',this.value)"' +
+        ' onfocus="onMatricFocus(\'' + r.id + '\')"' +
+        ' onkeydown="onMatricKeydown(event,\'' + r.id + '\')"' +
+        '></td>' +
+      '<td><div class="act-cell">' +
+        '<button class="tbtn" onclick="promptShiftRow(\'' + r.id + '\',\'up\')" title="Move up">&#8593;</button>' +
+        '<button class="tbtn" onclick="promptShiftRow(\'' + r.id + '\',\'down\')" title="Move down">&#8595;</button>' +
+        '<button class="tbtn d" onclick="clearRow(\'' + r.id + '\')" title="Clear">&#10005;</button>' +
+      '</div></td>' +
+    '</tr>';
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  updateStats();
+}
+
+function focusRow(id) {
+  if (!id) return;
+  var inp = document.getElementById('inp-' + id);
+  if (inp) { inp.focus(); inp.select(); }
+  var tr = document.getElementById('tr-' + id);
+  if (tr) tr.scrollIntoView({ block: 'nearest' });
+}
+
+function onMatricFocus(id) {
+  activeRowId = id;
+  document.querySelectorAll('tr.active-row').forEach(function(t) { t.classList.remove('active-row'); });
+  var tr = document.getElementById('tr-' + id);
+  if (tr) tr.classList.add('active-row');
+
+  // Pre-fill prefix for empty cells so the user only has to type the trailing digits.
+  var pfx = settings.autoPrefix ? (gv('matricPrefix') || '') : '';
+  if (pfx) {
+    var r = rows.find(function(x) { return x.id === id; });
+    var inp = document.getElementById('inp-' + id);
+    if (r && inp && !r.matricule) {
+      r.matricule = pfx;
+      inp.value   = pfx;
+      inp.classList.remove('empty');
+      // Cursor after the prefix so digits land in the right place
+      setTimeout(function() { inp.setSelectionRange(pfx.length, pfx.length); }, 0);
+      autoSaveDebounced();
+    }
+  }
+}
+
+function onMatricInput(id, val) {
+  var r = rows.find(function(x) { return x.id === id; });
+  if (!r) return;
+  r.matricule = val;
+  var inp = document.getElementById('inp-' + id);
+  if (inp) inp.classList.toggle('empty', !val);
+  checkDuplicates();
+  updateStats();
+  autoSaveDebounced();
+}
+
+function onMatricKeydown(e, id) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    e.stopPropagation();
+    advanceRow(id, 1);
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault(); advanceRow(id, 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault(); advanceRow(id, -1);
+  }
+}
+
+function advanceRow(fromId, delta) {
+  var idx = rows.findIndex(function(r) { return r.id === fromId; });
+  var next = rows[idx + delta];
+  if (next) { activeRowId = next.id; focusRow(next.id); }
+}
+
+function toggleAllRows(checked) {
+  rows.forEach(function(r) { if (checked) selectedRows.add(r.id); else selectedRows.delete(r.id); });
+  document.querySelectorAll('tbody input[type=checkbox]').forEach(function(cb) { cb.checked = checked; });
+  document.getElementById('selCount').textContent = selectedRows.size;
+}
+
+function toggleRowSel(id, checked) {
+  if (checked) selectedRows.add(id); else selectedRows.delete(id);
+  document.getElementById('selCount').textContent = selectedRows.size;
+}
+
+// ─── DUPLICATES ───────────────────────────────────
+function checkDuplicates() {
+  var seen = {};
+  duplicateIds.clear();
+  rows.forEach(function(r) {
+    if (!r.matricule) return;
+    var k = r.matricule.trim().toLowerCase();
+    if (seen[k]) { duplicateIds.add(r.id); duplicateIds.add(seen[k]); }
+    else seen[k] = r.id;
+  });
+  rows.forEach(function(r) {
+    var tr = document.getElementById('tr-' + r.id);
+    if (!tr) return;
+    var cell = tr.querySelector('.exam-code-cell');
+    var dupe = duplicateIds.has(r.id);
+    if (dupe) {
+      tr.classList.add('duplicate');
+      if (cell && !cell.querySelector('.dupe-badge')) {
+        cell.innerHTML = escH(r.examCode) + '<span class="dupe-badge">DUPE</span>';
+      }
+    } else {
+      tr.classList.remove('duplicate');
+      if (cell) cell.innerHTML = escH(r.examCode);
+    }
+  });
+  var dupes = duplicateIds.size > 0 ? Math.floor(duplicateIds.size / 2) : 0;
+  var el = document.getElementById('st-dupes');
+  if (el) el.textContent = dupes;
+  if (dupes > prevDupeCount) toast('Duplicate matricule detected!', 'warn');
+  prevDupeCount = dupes;
+}
+
+// ─── ROW OPERATIONS ───────────────────────────────
+function clearRow(id) {
+  var r = rows.find(function(x) { return x.id === id; });
+  if (!r) return;
+  r.matricule = '';
+  var inp = document.getElementById('inp-' + id);
+  if (inp) { inp.value = ''; inp.classList.add('empty'); }
+  checkDuplicates(); updateStats(); autoSaveDebounced();
+}
+
+function clearSelectedRows() {
+  selectedRows.forEach(function(id) { clearRow(id); });
+  toast('Cleared selected', 'success');
+}
+
+function promptShiftRow(id, dir) {
+  var idx = rows.findIndex(function(r) { return r.id === id; });
+  var swapIdx = dir === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= rows.length) { toast('Cannot move further', 'warn'); return; }
+  var actions;
+  if (dir === 'down') {
+    actions = [
+      { label: 'Swap with row below', cls: 'btn-primary', cb: (function(i1, i2) { return function() { closeModal(); _swapMatric(i1, i2); }; })(idx, swapIdx) },
+      { label: 'Shift all below up (cascade)', cls: 'btn-ghost', cb: (function(ix, d) { return function() { closeModal(); _shiftCascade(ix, d); }; })(idx, dir) },
+      { label: 'Insert blank here — push all below down', cls: 'btn-ghost', cb: (function(ix) { return function() { closeModal(); _insertBlankShiftDown(ix); }; })(idx) },
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ];
+  } else {
+    actions = [
+      { label: 'Swap with row above', cls: 'btn-primary', cb: (function(i1, i2) { return function() { closeModal(); _swapMatric(i1, i2); }; })(idx, swapIdx) },
+      { label: 'Shift all above down (cascade)', cls: 'btn-ghost', cb: (function(ix, d) { return function() { closeModal(); _shiftCascade(ix, d); }; })(idx, dir) },
+      { label: 'Insert blank here — pull all above up', cls: 'btn-ghost', cb: (function(ix) { return function() { closeModal(); _insertBlankShiftUp(ix); }; })(idx) },
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ];
+  }
+  showModal(
+    'Move Matricule ' + (dir === 'up' ? 'Up' : 'Down'),
+    'How do you want to shift this matricule?',
+    null,
+    actions
+  );
+}
+
+function _insertBlankShiftDown(idx) {
+  var lastVal = rows[rows.length - 1].matricule;
+  function doInsert() {
+    for (var i = rows.length - 1; i > idx; i--) rows[i].matricule = rows[i - 1].matricule;
+    rows[idx].matricule = '';
+    renderTable(); checkDuplicates(); autoSaveDebounced();
+  }
+  if (lastVal && lastVal.trim() && idx < rows.length - 1) {
+    showModal(
+      'Confirm Insert Blank',
+      'The last row value \'' + lastVal + '\' will be displaced (pushed off the end). Continue?',
+      null,
+      [
+        { label: 'Continue', cls: 'btn-danger', cb: function() { closeModal(); doInsert(); } },
+        { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+      ]
+    );
+    return;
+  }
+  doInsert();
+}
+
+function _insertBlankShiftUp(idx) {
+  for (var i = 0; i < idx; i++) rows[i].matricule = rows[i + 1].matricule;
+  rows[idx].matricule = '';
+  renderTable(); checkDuplicates(); autoSaveDebounced();
+}
+
+function _swapMatric(i1, i2) {
+  var tmp = rows[i1].matricule;
+  rows[i1].matricule = rows[i2].matricule;
+  rows[i2].matricule = tmp;
+  renderTable(); checkDuplicates(); autoSaveDebounced();
+}
+
+function _shiftCascade(idx, dir) {
+  if (dir === 'down') {
+    var mat = rows[idx].matricule;
+    for (var i = idx; i < rows.length - 1; i++) rows[i].matricule = rows[i + 1].matricule;
+    rows[rows.length - 1].matricule = mat;
+  } else {
+    var mat2 = rows[idx].matricule;
+    for (var j = idx; j > 0; j--) rows[j].matricule = rows[j - 1].matricule;
+    rows[0].matricule = mat2;
+  }
+  renderTable(); checkDuplicates(); autoSaveDebounced();
+}
+
+function shiftSelectedRows(dir) {
+  var sel = Array.from(selectedRows);
+  if (!sel.length) { toast('Select rows first', 'warn'); return; }
+  if (sel.length === 1) {
+    var idx = rows.findIndex(function(r) { return r.id === sel[0]; });
+    promptShiftRow(rows[idx].id, dir);
+    return;
+  }
+  var indices = sel.map(function(id) { return rows.findIndex(function(r) { return r.id === id; }); }).sort(function(a, b) { return a - b; });
+  if (dir === 'up') {
+    indices.forEach(function(i) { if (i > 0) { var t = rows[i].matricule; rows[i].matricule = rows[i-1].matricule; rows[i-1].matricule = t; } });
+  } else {
+    indices.reverse().forEach(function(i) { if (i < rows.length - 1) { var t = rows[i].matricule; rows[i].matricule = rows[i+1].matricule; rows[i+1].matricule = t; } });
+  }
+  renderTable(); checkDuplicates(); autoSaveDebounced();
+}
+
+function insertRowBelow() {
+  var idx = activeRowId ? rows.findIndex(function(r) { return r.id === activeRowId; }) : rows.length - 1;
+  var pre = gv('examPrefix') || 'XX';
+  var n = rows.length + 1;
+  var pad = Math.max(2, String(n).length);
+  var nr = { id: genId(), examCode: pre + String(n).padStart(pad, '0'), matricule: '' };
+  rows.splice(idx + 1, 0, nr);
+  reindexExamCodes();
+  renderTable(); focusRow(nr.id); autoSaveDebounced();
+}
+
+function deleteSelectedRows() {
+  if (!selectedRows.size) { toast('Select rows first', 'warn'); return; }
+  rows = rows.filter(function(r) { return !selectedRows.has(r.id); });
+  selectedRows.clear();
+  reindexExamCodes();
+  renderTable(); checkDuplicates(); autoSaveDebounced();
+  toast('Deleted', 'success');
+}
+
+function reindexExamCodes() {
+  var pre = gv('examPrefix') || 'XX';
+  var pad = Math.max(2, String(rows.length).length);
+  rows.forEach(function(r, i) { r.examCode = pre + String(i + 1).padStart(pad, '0'); });
+}
+
+// ─── STATS ────────────────────────────────────────
+function updateStats() {
+  var total = rows.length;
+  var filled = rows.filter(function(r) { return r.matricule && r.matricule.trim(); }).length;
+  var ts = document.getElementById('st-total');
+  var fs = document.getElementById('st-filled');
+  var es = document.getElementById('st-empty');
+  if (ts) ts.textContent = total;
+  if (fs) fs.textContent = filled;
+  if (es) es.textContent = total - filled;
+  var sc = document.getElementById('selCount');
+  if (sc) sc.textContent = selectedRows.size;
+}
+
+// ─── DONE / FINISH ────────────────────────────────
+function finishDocument() {
+  if (!rows.length) { toast('Nothing to finish', 'warn'); return; }
+  // Step 1: duplicates check
+  if (duplicateIds.size > 0) {
+    var dupeCount = Math.floor(duplicateIds.size / 2);
+    showModal(
+      'Duplicate Matricules Detected',
+      dupeCount + ' duplicate matricule(s) detected. Rows are highlighted in yellow.\n\nReview them or continue anyway?',
+      null,
+      [
+        { label: 'Review (go back)', cls: 'btn-danger', cb: closeModal },
+        { label: 'Continue anyway', cls: 'btn-ghost', cb: function() { closeModal(); _checkBlanks(); } }
+      ]
+    );
+    return;
+  }
+  _checkBlanks();
+}
+
+function _checkBlanks() {
+  var blankOnes = rows.filter(function(r) { return !r.matricule || !r.matricule.trim(); });
+  if (blankOnes.length > 0) {
+    var examples = blankOnes.slice(0, 3).map(function(r) { return r.examCode; }).join(', ');
+    showModal(
+      'Blank Matricules Found',
+      blankOnes.length + ' exam code(s) have no matricule assigned.\n\nBlank rows: ' + examples + (blankOnes.length > 3 ? ' …' : '') + '\n\nThese students will have no entry in the export. Continue anyway?',
+      null,
+      [
+        { label: 'Review (go back)', cls: 'btn-danger', cb: closeModal },
+        { label: 'Continue anyway', cls: 'btn-ghost', cb: function() { closeModal(); _checkShortMatricules(); } }
+      ]
+    );
+    return;
+  }
+  _checkShortMatricules();
+}
+
+function _checkShortMatricules() {
+  var shortOnes = rows.filter(function(r) { return r.matricule && r.matricule.trim().length > 0 && r.matricule.trim().length < 10; });
+  if (shortOnes.length > 0) {
+    var examples = shortOnes.slice(0, 3).map(function(r) { return r.examCode + ': "' + r.matricule + '"'; }).join('\n');
+    showModal(
+      'Short Matricule Warning',
+      shortOnes.length + ' matricule(s) are shorter than 10 characters.\n\nExamples:\n' + examples + '\n\nReview them or continue anyway?',
+      null,
+      [
+        { label: 'Review (go back)', cls: 'btn-danger', cb: closeModal },
+        { label: 'Continue anyway', cls: 'btn-ghost', cb: function() { closeModal(); _checkLongMatricules(); } }
+      ]
+    );
+    return;
+  }
+  _checkLongMatricules();
+}
+
+function _checkLongMatricules() {
+  var longOnes = rows.filter(function(r) { return r.matricule && r.matricule.trim().length > 10; });
+  if (longOnes.length > 0) {
+    var examples = longOnes.slice(0, 3).map(function(r) { return r.examCode + ': "' + r.matricule + '"'; }).join('\n');
+    showModal(
+      'Matricule Length Warning',
+      longOnes.length + ' matricule(s) are longer than 10 characters.\n\nExamples:\n' + examples + '\n\nReview them or continue?',
+      null,
+      [
+        { label: 'Review (go back)', cls: 'btn-danger', cb: closeModal },
+        { label: 'Continue anyway', cls: 'btn-ghost', cb: function() { closeModal(); _doFinish(); } }
+      ]
+    );
+    return;
+  }
+  _doFinish();
+}
+
+function _doFinish() {
+  saveToFiles(true);
+  rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
+  ['courseCode','courseTitle','examPrefix','numScripts'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderTable(); updateStats();
+  document.getElementById('doneBar').style.display = 'none';
+  document.getElementById('previewBox').textContent = '---';
+  saveToStorage();
+  toast('Saved. Ready for next course.', 'success');
+}
+
+// ─── AUTOCOMPLETE ─────────────────────────────────
+var acIdx = -1;
+function onCourseCodeInput(val) {
+  var inp = document.getElementById('courseCode');
+  var upper = val.toUpperCase();
+  if (upper !== val) { inp.value = upper; val = upper; }
+  var list = document.getElementById('acList');
+  var keys = Object.keys(courseDict).filter(function(k) { return val && k.toLowerCase().startsWith(val.toLowerCase()); });
+  if (!keys.length) { list.classList.remove('open'); return; }
+  list.innerHTML = keys.map(function(k, i) {
+    return '<div class="ac-item" onmousedown="selectAC(\'' + escH(k) + '\')" id="aci-' + i + '">' +
+      '<div class="ac-code">' + escH(k) + '</div>' +
+      '<div class="ac-title-sm">' + escH(courseDict[k]) + '</div></div>';
+  }).join('');
+  list.classList.add('open');
+  acIdx = -1;
+}
+
+function onCourseTitleInput(val) {
+  if (val && val[0] !== val[0].toUpperCase()) {
+    var inp = document.getElementById('courseTitle');
+    inp.value = val.charAt(0).toUpperCase() + val.slice(1);
+  }
+  autoSaveDebounced();
+}
+
+function selectAC(code) {
+  document.getElementById('courseCode').value = code;
+  document.getElementById('courseTitle').value = courseDict[code] || '';
+  hideSuggestions(); autoSaveDebounced();
+}
+
+function hideSuggestions() {
+  setTimeout(function() {
+    var l = document.getElementById('acList'); if (l) l.classList.remove('open');
+  }, 120);
+}
+
+function acKeydown(e) {
+  var items = document.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { acIdx = Math.min(acIdx + 1, items.length - 1); hlAC(items); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { acIdx = Math.max(acIdx - 1, -1); hlAC(items); e.preventDefault(); }
+  else if (e.key === 'Enter' && acIdx >= 0) { items[acIdx].dispatchEvent(new MouseEvent('mousedown')); e.preventDefault(); }
+  else if (e.key === 'Escape') hideSuggestions();
+  else {
+    var code = e.target.value + (e.key.length === 1 ? e.key : '');
+    if (courseDict[code]) document.getElementById('courseTitle').value = courseDict[code];
+  }
+}
+
+function hlAC(items) {
+  items.forEach(function(el, i) { el.style.background = i === acIdx ? 'var(--surface4)' : ''; });
+}
+
+// ─── SILENCE LABEL ────────────────────────────────
+function updateSilenceLabel() {
+  var val = parseInt(document.getElementById('silenceSlider').value) || 1000;
+  document.getElementById('silenceVal').textContent = (val / 1000).toFixed(1) + 's';
+  autoSaveDebounced();
+}
+
+// ─── VOICE ────────────────────────────────────────────────
+// DESIGN: start/stop the engine with the mic button.
+//
+// The old approach ran the engine continuously (never calling stop()) to avoid
+// Chrome replaying buffered results on restart. That replay issue is now solved
+// by lastProcessedResultIndex, so we can safely stop/start normally.
+//
+// getUserMedia is NOT called - it caused a gratuitous permission prompt on page
+// load separate from the SpeechRecognition prompt. Chrome only needs one prompt
+// per domain; let SpeechRecognition handle it when the user actually taps the mic.
+//
+// onend only restarts when isListening=true (user has mic on). Unconditional
+// restart was the cause of repeated permission prompts.
+
+var recStarted   = false;
+var pendingStart = false;
+
+function initVoicePermission() {
+  // Pre-build the recognition object so it is ready when the user taps the mic,
+  // but do NOT start it yet — starting triggers Chrome's permission prompt before
+  // the user has shown any intent to use the mic.
+  _buildRecognitionIfNeeded();
+}
+
+function _buildRecognitionIfNeeded() {
+  if (recognition) return;
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+
+  recognition = new SR();
+  recognition.continuous      = true;
+  recognition.interimResults  = true;
+  recognition.lang            = 'en-US';
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = _handleResult;
+
+  recognition.onerror = function(ev) {
+    if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+      var isMob = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      var msg = isMob
+        ? (location.protocol === 'file:'
+            ? 'Voice needs HTTPS on mobile. Open this file from Google Drive / Dropbox / a web server.'
+            : 'Mic blocked. In Chrome: tap ⋮ → Site settings → Microphone → Allow, then retry.')
+        : 'Microphone blocked. Allow mic in browser settings.';
+      toast(msg, 'error');
+      isListening = false;
+      recStarted  = false;
+      recognition = null; // Force fresh instance on next tap so permission dialog retriggers
+      _setMicUI(false);
+    }
+    // other errors: onend will restart if still listening
+  };
+
+  recognition.onend = function() {
+    recStarted = false;
+    lastProcessedResultIndex = -1;
+    // Only restart when the user has the mic on. Unconditional restart kept calling
+    // recognition.start() in the background and triggered repeated Chrome prompts.
+    if (isListening) {
+      setTimeout(function() { _tryStartEngine(); }, 300);
+    }
+  };
+}
+
+function _tryStartEngine() {
+  if (recStarted || !recognition) return;
+  try {
+    recognition.start();
+    recStarted = true;
+  } catch(e) {
+    recStarted = true; // already running
+  }
+}
+
+function _handleResult(e) {
+  if (!isListening) return;   // mic is "paused" - discard everything
+
+  var interim = '';
+  var hasFinal = false;
+
+  for (var i = e.resultIndex; i < e.results.length; i++) {
+    if (e.results[i].isFinal) {
+      // Skip already-processed results (index-based dedup avoids blocking identical digits
+      // spoken for different rows, which the old text-comparison dedup broke).
+      if (i <= lastProcessedResultIndex) continue;
+      lastProcessedResultIndex = i;
+      hasFinal = true;
+
+      var finalTxt = e.results[i][0].transcript.trim();
+      if (!finalTxt) continue;
+
+      var targetRowId = activeRowId;          // snapshot row at this exact moment
+      processVoiceInput(finalTxt, targetRowId);
+
+      // Advance immediately so the NEXT final goes to the next row, not this one.
+      // Waiting for the silence timer caused rapid speech to pile up on the same row.
+      clearTimeout(silenceTimerHandle);
+      silenceTimerHandle = null;
+      if (settings.autoAdvance) {
+        advanceRow(targetRowId, 1);
+      }
+
+      var vt = document.getElementById('vTranscript');
+      if (vt) vt.textContent = finalTxt;
+    } else {
+      interim += e.results[i][0].transcript;
+    }
+  }
+
+  if (!hasFinal) {
+    var vt2 = document.getElementById('vTranscript');
+    if (vt2) vt2.textContent = interim.trim();
+    // Do NOT start the silence timer from interim results.
+    // The timer was firing before the final arrived, advancing the row early so
+    // the final then wrote to the wrong (already-advanced) row — causing the
+    // double-skip visible in the screenshot. Row advance now happens only on
+    // final via advanceRow(), which is sufficient: recognition itself only
+    // produces a final after the user stops speaking (its own silence detection).
+  }
+}
+
+function toggleVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    toast('Speech recognition requires Chrome or Edge', 'error');
+    return;
+  }
+  if (isListening) stopVoice(); else startVoice();
+}
+
+function startVoice() {
+  if (isListening) return;
+
+  _buildRecognitionIfNeeded();
+  if (!recognition) {
+    toast('Speech recognition requires Chrome or Edge', 'error');
+    return;
+  }
+
+  // On mobile Chrome, SpeechRecognition alone often fails silently (especially on file://).
+  // getUserMedia first triggers the real OS-level permission dialog, then we hand off to
+  // SpeechRecognition which manages its own audio stream.
+  var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    _setMicUI(true); // show feedback while permission dialog is up
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+      stream.getTracks().forEach(function(t) { t.stop(); }); // release track; SpeechRecognition opens its own
+      _doStartVoice();
+    }).catch(function() {
+      _setMicUI(false);
+      if (location.protocol === 'file:') {
+        toast('Voice needs HTTPS on mobile. Open this file from Google Drive / Dropbox / a web server.', 'error');
+      } else {
+        toast('Mic denied. In Chrome: tap ⋮ → Site settings → Microphone → Allow, then retry.', 'error');
+      }
+    });
+    return;
+  }
+
+  _doStartVoice();
+}
+
+function _doStartVoice() {
+  isListening  = true;
+  pendingStart = false;
+  lastProcessedResultIndex = -1;
+  clearTimeout(silenceTimerHandle);
+  silenceTimerHandle = null;
+  _tryStartEngine();
+  _setMicUI(true);
+}
+
+function stopVoice() {
+  isListening  = false;
+  pendingStart = false;
+
+  clearTimeout(silenceTimerHandle);
+  silenceTimerHandle = null;
+
+  // Properly stop the engine. Replay issues that made stop() dangerous before
+  // are now handled by lastProcessedResultIndex, so this is safe.
+  if (recognition && recStarted) {
+    try { recognition.stop(); } catch(e) {}
+  }
+
+  _setMicUI(false);
+  lastFinalTranscript = '';
+}
+
+function _setMicUI(on) {
+  var btn = document.getElementById('micBtn');
+  var vs  = document.getElementById('vStatus');
+  var vt  = document.getElementById('vTranscript');
+  if (btn) {
+    btn.classList.toggle('listening', on);
+    btn.textContent = on ? String.fromCodePoint(0x1F534) : String.fromCodePoint(0x1F3A4);
+  }
+  if (vs) {
+    if (on) {
+      var idx = activeRowId ? rows.findIndex(function(r) { return r.id === activeRowId; }) : -1;
+      vs.textContent = 'Listening — row ' + (idx + 1) + ' — speak last digits';
+    } else {
+      vs.textContent = 'Tap mic to start';
+    }
+  }
+  if (vt) {
+    vt.style.display = on ? 'block' : 'none';
+    if (!on) vt.textContent = '';
+  }
+}
+
+function processVoiceInput(transcript, targetRowId) {
+  var rowId = targetRowId || activeRowId;
+  if (!rowId) return;
+  var digits = transcript.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+  if (!digits) return;
+  var pfx  = settings.autoPrefix ? (gv('matricPrefix') || '') : '';
+  var full = pfx + digits;
+  var r = rows.find(function(x) { return x.id === rowId; });
+  if (!r) return;
+  r.matricule = full;
+  var inp = document.getElementById('inp-' + rowId);
+  if (inp) { inp.value = full; inp.classList.remove('empty'); }
+  var vs = document.getElementById('vStatus');
+  if (vs) vs.textContent = 'Set ' + r.examCode + ': ' + full;
+  checkDuplicates(); updateStats(); autoSaveDebounced();
+}
+
+function resetSilenceTimer(forRowId) {
+  clearTimeout(silenceTimerHandle);
+  if (!settings.autoAdvance) return;
+  if (!isListening) return;          // never schedule advance while mic is off
+  var delay  = appliedSilenceMs || 1000;
+  var snapId = forRowId || activeRowId;
+  silenceTimerHandle = setTimeout(function() {
+    if (!isListening) return;                  // mic turned off while timer was pending
+    if (snapId && snapId === activeRowId) {    // user has not manually moved rows
+      advanceRow(snapId, 1);
+    }
+  }, delay);
+}
+
+// ─── EXPORT / SAVE ────────────────────────────────
+function exportCSV() {
+  if (!rows.length) { toast('No data', 'warn'); return; }
+  var code = gv('courseCode') || 'course';
+  var title = gv('courseTitle') || 'export';
+  function doExport(finalTitle) {
+    var fname = code + '_' + finalTitle.replace(/\s+/g, '_') + '.csv';
+    var csv = rows.map(function(r) { return r.matricule + ',' + r.examCode; }).join('\n');
+    dlText(csv, fname, 'text/csv');
+    logAct('export', fname);
+    toast('Exported: ' + fname, 'success');
+    if (code && finalTitle) { courseDict[code] = finalTitle; saveToStorage(); }
+  }
+  if (!_skipTitleCheck && code && title && courseDict[code] && courseDict[code].toLowerCase() !== title.toLowerCase()) {
+    var existing = courseDict[code];
+    showModal('Course Title Mismatch',
+      'The code \'' + code + '\' is already recorded with title:\n\'' + existing + '\'\n\nYou entered:\n\'' + title + '\'\n\nWhich is correct?',
+      null,
+      [
+        { label: 'Keep \'' + existing + '\'', cls: 'btn-ghost', cb: function() {
+          closeModal();
+          document.getElementById('courseTitle').value = existing;
+          _skipTitleCheck = true; doExport(existing); _skipTitleCheck = false;
+        }},
+        { label: 'Use \'' + title + '\'', cls: 'btn-primary', cb: function() {
+          closeModal();
+          _skipTitleCheck = true; doExport(title); _skipTitleCheck = false;
+        }},
+        { label: 'Type a new one', cls: 'btn-ghost', cb: function() {
+          closeModal();
+          showModal('Enter Correct Title', 'Type the correct course title:', { type: 'text', placeholder: title, value: title }, [
+            { label: 'Use This Title', cls: 'btn-primary', cb: function() {
+              var newTitle = (document.getElementById('modalTextInput').value || '').trim() || title;
+              closeModal();
+              document.getElementById('courseTitle').value = newTitle;
+              _skipTitleCheck = true; doExport(newTitle); _skipTitleCheck = false;
+            }},
+            { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+          ]);
+        }}
+      ]
+    );
+    return;
+  }
+  doExport(title);
+}
+
+function saveToFiles(silent) {
+  if (!rows.length) { if (!silent) toast('No data', 'warn'); return; }
+  var code = gv('courseCode') || 'course';
+  var title = gv('courseTitle') || 'untitled';
+  function doSave(finalTitle) {
+    var fname = code + '_' + finalTitle.replace(/\s+/g, '_') + '.csv';
+    var csv = rows.map(function(r) { return r.matricule + ',' + r.examCode; }).join('\n');
+    var folder = findNode(fsRoot, curFolderId);
+    var existing = folder.children.find(function(f) { return f.name === fname && f.type === 'file'; });
+
+    function commit(targetName, node) {
+      if (node) { node.content = csv; node.modified = Date.now(); }
+      else { folder.children.push({ id: genId(), name: targetName, type: 'file', content: csv, created: Date.now(), modified: Date.now() }); }
+      saveToStorage();
+      logAct('save_doc', targetName + ' \u2022 ' + rows.length + ' rows');
+      if (!silent) { toast('Saved: ' + targetName, 'success'); renderFilesPage(); }
+      if (code && finalTitle) { courseDict[code] = finalTitle; saveToStorage(); }
+    }
+
+    if (existing && !silent) {
+      // A different file with the same name already exists — ask the user what to do.
+      showModal('File Already Exists',
+        '"' + fname + '" already exists in this folder.\nChoose how to save:',
+        null,
+        [
+          { label: 'Replace', cls: 'btn-danger', cb: function() {
+            closeModal(); commit(fname, existing);
+          }},
+          { label: 'Save Differently', cls: 'btn-primary', cb: function() {
+            closeModal();
+            var base = fname.replace(/\.csv$/, '');
+            var n = 1, newName;
+            do { newName = base + '_' + n++ + '.csv'; }
+            while (folder.children.find(function(f) { return f.name === newName; }));
+            commit(newName, null);
+          }},
+          { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+        ]
+      );
+      return;
+    }
+
+    // silent auto-save (from _doFinish) or no collision — proceed directly.
+    commit(fname, existing || null);
+  }
+  if (!silent && !_skipTitleCheck && code && title && courseDict[code] && courseDict[code].toLowerCase() !== title.toLowerCase()) {
+    var existing2 = courseDict[code];
+    showModal('Course Title Mismatch',
+      'The code \'' + code + '\' is already recorded with title:\n\'' + existing2 + '\'\n\nYou entered:\n\'' + title + '\'\n\nWhich is correct?',
+      null,
+      [
+        { label: 'Keep \'' + existing2 + '\'', cls: 'btn-ghost', cb: function() {
+          closeModal();
+          document.getElementById('courseTitle').value = existing2;
+          _skipTitleCheck = true; doSave(existing2); _skipTitleCheck = false;
+        }},
+        { label: 'Use \'' + title + '\'', cls: 'btn-primary', cb: function() {
+          closeModal();
+          _skipTitleCheck = true; doSave(title); _skipTitleCheck = false;
+        }},
+        { label: 'Type a new one', cls: 'btn-ghost', cb: function() {
+          closeModal();
+          showModal('Enter Correct Title', 'Type the correct course title:', { type: 'text', placeholder: title, value: title }, [
+            { label: 'Use This Title', cls: 'btn-primary', cb: function() {
+              var newTitle = (document.getElementById('modalTextInput').value || '').trim() || title;
+              closeModal();
+              document.getElementById('courseTitle').value = newTitle;
+              _skipTitleCheck = true; doSave(newTitle); _skipTitleCheck = false;
+            }},
+            { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+          ]);
+        }}
+      ]
+    );
+    return;
+  }
+  doSave(title);
+}
+
+function dlText(content, filename, mime) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime || 'text/plain' }));
+  a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+// ─── FILES PAGE ───────────────────────────────────
+function findNode(root, id) {
+  if (root.id === id) return root;
+  if (root.children) {
+    for (var i = 0; i < root.children.length; i++) {
+      var f = findNode(root.children[i], id);
+      if (f) return f;
+    }
+  }
+  return null;
+}
+
+function getAncestors(targetId) {
+  function search(node, path) {
+    if (node.id === targetId) return path.concat([node]);
+    if (node.children) {
+      for (var i = 0; i < node.children.length; i++) {
+        var r = search(node.children[i], path.concat([node]));
+        if (r) return r;
+      }
+    }
+    return null;
+  }
+  return search(fsRoot, []) || [fsRoot];
+}
+
+function renderFilesPage() {
+  if (viewingBin) { renderBinPage(); return; }
+  var folder = findNode(fsRoot, curFolderId);
+  if (!folder) { curFolderId = 'root'; renderFilesPage(); return; }
+  var path = getAncestors(curFolderId);
+  var crumb = '';
+  path.forEach(function(n, i) {
+    if (i > 0) crumb += '<span class="crumb-sep">/</span>';
+    crumb += '<span class="crumb" onclick="navTo(\'' + n.id + '\')">' + (i === 0 ? '&#128193; My Files' : escH(n.name)) + '</span>';
+  });
+  var pc = document.getElementById('pathCrumb'); if (pc) pc.innerHTML = crumb;
+  var grid = document.getElementById('filesGrid'); if (!grid) return;
+  var items = (folder.children || []).slice();
+  if (sortMode === 'name') items.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  else items.sort(function(a, b) { return (b.modified || b.created || 0) - (a.modified || a.created || 0); });
+  if (!items.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128194;</div><p>No files yet.<br>Use Builder to save files.</p></div>';
+    grid.classList.remove('list-view');
+    return;
+  }
+  grid.classList.toggle('list-view', filesView === 'list');
+  grid.innerHTML = items.map(function(item) {
+    var icon = item.type === 'folder' ? '&#128193;' : '&#128196;';
+    var sel = selectedFiles.has(item.id);
+    var ts = item.modified || item.created || 0;
+    var meta = ts ? new Date(ts).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + new Date(ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+    var size = (item.type === 'file' && item.content) ? (item.content.length >= 1024 ? (item.content.length / 1024).toFixed(1) + ' KB' : item.content.length + ' B') : '';
+    var metaStr = meta + (size ? ' &bull; ' + size : '');
+    return '<div class="file-card ' + (sel ? 'selected' : '') + '" id="fc-' + item.id + '"' +
+      ' onclick="fcClick(event,\'' + item.id + '\')"' +
+      ' ondblclick="fcDbl(\'' + item.id + '\')"' +
+      ' oncontextmenu="showCtx(event,\'' + item.id + '\')">' +
+      '<div class="file-check" onclick="toggleFileSelect(event,\'' + item.id + '\')">' + (sel ? '&#10003;' : '') + '</div>' +
+      '<div class="file-icon">' + icon + '</div>' +
+      '<div class="file-name">' + escH(item.name) + '</div>' +
+      '<div class="file-meta">' + metaStr + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function fcClick(e, id) {
+  // Always toggle — clicking adds/removes without clearing other selections.
+  // Use double-click (fcDbl) to open files or navigate into folders.
+  if (selectedFiles.has(id)) selectedFiles.delete(id); else selectedFiles.add(id);
+  renderFilesPage();
+}
+
+function toggleFileSelect(e, id) {
+  e.stopPropagation();
+  if (selectedFiles.has(id)) selectedFiles.delete(id); else selectedFiles.add(id);
+  renderFilesPage();
+}
+
+function toggleSelectAll() {
+  var folder = findNode(fsRoot, curFolderId);
+  if (!folder) return;
+  var items = folder.children || [];
+  var allSelected = items.length > 0 && items.every(function(item) { return selectedFiles.has(item.id); });
+  if (allSelected) {
+    items.forEach(function(item) { selectedFiles.delete(item.id); });
+  } else {
+    items.forEach(function(item) { selectedFiles.add(item.id); });
+  }
+  renderFilesPage();
+}
+
+function setFilesView(mode) {
+  filesView = mode;
+  var tb = document.getElementById('viewTilesBtn');
+  var lb = document.getElementById('viewListBtn');
+  if (tb) tb.classList.toggle('active', mode === 'tiles');
+  if (lb) lb.classList.toggle('active', mode === 'list');
+  renderFilesPage();
+}
+
+function fcDbl(id) {
+  var node = findNode(fsRoot, id);
+  if (!node) return;
+  if (node.type === 'folder') navTo(node.id);
+  else openFileForEdit(node);
+}
+
+function openFileForEdit(node) {
+  if (!node || node.type !== 'file') return;
+  var lines = (node.content || '').split('\n').filter(Boolean);
+  if (!lines.length) return;
+  var parts0 = lines[0].split(',');
+  var examPrefix = (parts0[1] || '').replace(/\d+$/, '');
+  document.getElementById('examPrefix').value = examPrefix;
+  document.getElementById('numScripts').value = lines.length;
+  var nameParts = node.name.replace(/\.csv$/, '').split('_');
+  document.getElementById('courseCode').value = nameParts[0] || '';
+  document.getElementById('courseTitle').value = nameParts.slice(1).join(' ') || '';
+  rows = lines.map(function(line) {
+    var p = line.split(',');
+    return { id: genId(), examCode: (p[1] || '').trim(), matricule: (p[0] || '').trim() };
+  });
+  activeRowId = rows[0] ? rows[0].id : null;
+  updatePreview();
+  renderTable();
+  checkDuplicates();
+  updateStats();
+  document.getElementById('doneBar').style.display = 'flex';
+  switchPage('builder');
+  toast('Opened: ' + node.name, 'success');
+}
+
+function navTo(id) { curFolderId = id; selectedFiles.clear(); renderFilesPage(); }
+function navToRoot() { navTo('root'); }
+
+function sortFiles(mode) {
+  sortMode = mode;
+  document.getElementById('sortNameBtn').classList.toggle('active', mode === 'name');
+  document.getElementById('sortDateBtn').classList.toggle('active', mode === 'date');
+  renderFilesPage();
+}
+
+function createFolder() {
+  showModal('New Folder', 'Enter folder name:', { type: 'text', placeholder: 'My Folder' }, [
+    { label: 'Create', cls: 'btn-primary', cb: function() {
+      var n = document.getElementById('modalTextInput').value.trim();
+      if (!n) return;
+      var folder = findNode(fsRoot, curFolderId);
+      folder.children.push({ id: genId(), name: n, type: 'folder', children: [], created: Date.now(), modified: Date.now() });
+      saveToStorage(); renderFilesPage(); closeModal(); toast('Folder created', 'success');
+      logAct('folder', 'Created folder "' + n + '"');
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+function downloadSelected() {
+  var sel = Array.from(selectedFiles);
+  if (!sel.length) { toast('Select files first', 'warn'); return; }
+  sel.forEach(function(id) {
+    var node = findNode(fsRoot, id);
+    if (!node) return;
+    if (node.type === 'file') {
+      dlText(node.content || '', node.name, 'text/csv');
+    } else {
+      var lines = [];
+      function coll(f, p) {
+        (f.children || []).forEach(function(c) {
+          if (c.type === 'file') lines.push('=== ' + p + '/' + c.name + ' ===\n' + (c.content || ''));
+          else coll(c, p + '/' + c.name);
+        });
+      }
+      coll(node, node.name);
+      dlText(lines.join('\n\n'), node.name + '.txt');
+    }
+  });
+}
+
+function moveSelected() {
+  var sel = Array.from(selectedFiles);
+  if (!sel.length) { toast('Select files first', 'warn'); return; }
+  var selSet = new Set(sel);
+
+  // Build list of valid destinations: exclude current folder and any selected folder
+  // (prevents moving a folder into itself or one of its selected siblings)
+  var folders = [];
+  function collectF(node, depth) {
+    if (node.type === 'folder' && node.id !== curFolderId && !selSet.has(node.id))
+      folders.push({ id: node.id, name: '  '.repeat(depth) + (depth === 0 ? 'My Files (root)' : node.name) });
+    if (node.children) node.children.filter(function(c) { return c.type === 'folder'; }).forEach(function(c) { collectF(c, depth + 1); });
+  }
+  collectF(fsRoot, 0);
+  if (!folders.length) { toast('No destination folders available', 'warn'); return; }
+
+  var opts = folders.map(function(f) { return '<option value="' + f.id + '">' + escH(f.name) + '</option>'; }).join('');
+  showModal('Move ' + sel.length + ' item(s) To', 'Select destination folder:', { type: 'select', options: opts }, [
+    { label: 'Move', cls: 'btn-primary', cb: function() {
+      var destId = document.getElementById('modalSelectInput').value;
+      // Capture all node refs BEFORE any tree mutations
+      var nodesToMove = sel.map(function(id) { return findNode(fsRoot, id); }).filter(Boolean);
+      if (!nodesToMove.length) { closeModal(); return; }
+      // Remove all from tree first
+      nodesToMove.forEach(function(node) { removeFromParent(fsRoot, node.id); });
+      // Re-find destination (safe: dest was not in selSet, so it still exists in tree)
+      var dest = findNode(fsRoot, destId);
+      if (!dest) { toast('Destination folder no longer exists', 'error'); closeModal(); return; }
+      if (!Array.isArray(dest.children)) dest.children = [];
+      // Add all to destination
+      nodesToMove.forEach(function(node) { dest.children.push(node); });
+      selectedFiles.clear();
+      saveToStorage(); renderFilesPage(); closeModal();
+      toast('Moved ' + nodesToMove.length + ' item(s) to “' + dest.name + '”', 'success');
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+function removeFromParent(root, id) {
+  if (root.children) {
+    var i = root.children.findIndex(function(c) { return c.id === id; });
+    if (i >= 0) { root.children.splice(i, 1); return true; }
+    for (var j = 0; j < root.children.length; j++) { if (removeFromParent(root.children[j], id)) return true; }
+  }
+  return false;
+}
+
+function getParentId(targetId) {
+  function find(node) {
+    if (!node.children) return null;
+    for (var i = 0; i < node.children.length; i++) {
+      if (node.children[i].id === targetId) return node.id;
+      var r = find(node.children[i]); if (r) return r;
+    }
+    return null;
+  }
+  return find(fsRoot) || 'root';
+}
+
+function deleteSelected() {
+  var sel = Array.from(selectedFiles);
+  if (!sel.length) { toast('Select items first', 'warn'); return; }
+  showModal('Move to Recycle Bin?',
+    sel.length + ' item(s) will be moved to the recycle bin.\nItems are permanently deleted after 30 days.',
+    null,
+    [
+      { label: 'Move to Bin', cls: 'btn-danger', cb: function() {
+        var now = Date.now();
+        sel.forEach(function(id) {
+          var node = findNode(fsRoot, id);
+          if (!node) return;
+          var parentId = getParentId(id);
+          removeFromParent(fsRoot, id);
+          recycleBin.push({ id: genId(), node: node, originalParentId: parentId, deletedAt: now });
+        });
+        selectedFiles.clear(); saveToStorage(); renderFilesPage(); closeModal(); updateBinCount();
+        logAct('delete', sel.length + ' item(s) moved to bin');
+        toast(sel.length + ' item(s) moved to recycle bin', 'warn');
+      }},
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]
+  );
+}
+
+// ─── RECYCLE BIN ──────────────────────────────────
+function updateBinCount() {
+  var el = document.getElementById('binCount');
+  if (el) el.textContent = recycleBin.length > 0 ? recycleBin.length : '';
+}
+
+function purgeExpiredBin() {
+  var cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  var before = recycleBin.length;
+  recycleBin = recycleBin.filter(function(b) { return b.deletedAt > cutoff; });
+  if (recycleBin.length < before) {
+    var purged = before - recycleBin.length;
+    saveToStorage();
+    console.log(purged + ' bin item(s) permanently deleted (30-day limit).');
+  }
+}
+
+function showBin() {
+  viewingBin = true;
+  selectedFiles.clear();
+  renderFilesPage();
+}
+
+function hideBin() {
+  viewingBin = false;
+  renderFilesPage();
+}
+
+function restoreFromBin(binItemId) {
+  var idx = recycleBin.findIndex(function(b) { return b.id === binItemId; });
+  if (idx < 0) return;
+  var item = recycleBin[idx];
+  var parent = findNode(fsRoot, item.originalParentId) || findNode(fsRoot, 'root');
+  if (!parent.children) parent.children = [];
+  parent.children.push(item.node);
+  recycleBin.splice(idx, 1);
+  saveToStorage(); renderFilesPage(); updateBinCount();
+  toast('Restored: ' + item.node.name, 'success');
+}
+
+function permanentDeleteFromBin(binItemId) {
+  var item = recycleBin.find(function(b) { return b.id === binItemId; });
+  if (!item) return;
+  showModal('Permanently Delete?',
+    '"' + item.node.name + '" will be deleted forever. This cannot be undone.',
+    null,
+    [
+      { label: 'Delete Forever', cls: 'btn-danger', cb: function() {
+        recycleBin = recycleBin.filter(function(b) { return b.id !== binItemId; });
+        saveToStorage(); renderFilesPage(); closeModal(); updateBinCount();
+        toast('Permanently deleted', 'success');
+      }},
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]
+  );
+}
+
+function emptyBin() {
+  if (!recycleBin.length) { toast('Recycle bin is already empty', 'warn'); return; }
+  showModal('Empty Recycle Bin?',
+    'Permanently delete ALL ' + recycleBin.length + ' item(s) in the bin?\nThis cannot be undone.',
+    null,
+    [
+      { label: 'Empty Bin', cls: 'btn-danger', cb: function() {
+        recycleBin = [];
+        saveToStorage(); renderFilesPage(); closeModal(); updateBinCount();
+        toast('Recycle bin emptied', 'success');
+      }},
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]
+  );
+}
+
+function renderBinPage() {
+  var pc = document.getElementById('pathCrumb');
+  if (pc) pc.innerHTML =
+    '<span class="crumb" onclick="hideBin()">&#128193; My Files</span>' +
+    '<span class="crumb-sep">/</span>' +
+    '<span style="color:var(--red)">&#128465; Recycle Bin</span>';
+
+  var grid = document.getElementById('filesGrid'); if (!grid) return;
+  grid.classList.remove('list-view');
+
+  if (!recycleBin.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128465;</div><p>Recycle bin is empty.<br>Deleted files appear here for 30 days.</p></div>';
+    return;
+  }
+
+  var now = Date.now();
+  var thirtyDays = 30 * 24 * 60 * 60 * 1000;
+  // Sort: most recently deleted first
+  var sorted = recycleBin.slice().sort(function(a, b) { return b.deletedAt - a.deletedAt; });
+
+  var rows_html = sorted.map(function(b) {
+    var daysLeft = Math.max(0, Math.ceil((thirtyDays - (now - b.deletedAt)) / 86400000));
+    var deletedStr = new Date(b.deletedAt).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) +
+      ' ' + new Date(b.deletedAt).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    var icon = b.node.type === 'folder' ? '&#128193;' : '&#128196;';
+    var urgency = daysLeft <= 3 ? 'soon' : '';
+    return '<div class="bin-row">' +
+      '<div style="font-size:20px;flex-shrink:0;">' + icon + '</div>' +
+      '<div class="bin-row-main">' +
+        '<div class="bin-row-name">' + escH(b.node.name) + '</div>' +
+        '<div class="bin-row-sub">Deleted ' + deletedStr +
+          ' &bull; <span class="days-left ' + urgency + '">' + daysLeft + ' day(s)</span> until permanent deletion</div>' +
+      '</div>' +
+      '<div class="bin-actions">' +
+        '<button class="btn btn-ghost btn-sm" onclick="restoreFromBin(\'' + b.id + '\')">&#8617; Restore</button>' +
+        '<button class="btn btn-danger btn-sm" onclick="permanentDeleteFromBin(\'' + b.id + '\')">&#128465;</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  grid.innerHTML =
+    '<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:6px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 6px;border-bottom:1px solid var(--border);margin-bottom:4px;">' +
+        '<span style="font-size:0.75rem;color:var(--text2);">' + recycleBin.length + ' item(s) in bin &bull; Items older than 30 days are deleted automatically</span>' +
+        '<button class="btn btn-danger btn-sm" onclick="emptyBin()">&#128465; Empty Bin</button>' +
+      '</div>' +
+      rows_html +
+    '</div>';
+}
+
+// ─── CONTEXT MENU ─────────────────────────────────
+function showCtx(e, id) {
+  e.preventDefault();
+  ctxTargetId = id;
+  selectedFiles.clear(); selectedFiles.add(id);
+  renderFilesPage();
+  var m = document.getElementById('ctxMenu');
+  var x = e.clientX, y = e.clientY;
+  m.style.display = 'block';
+  var mw = m.offsetWidth, mh = m.offsetHeight;
+  if (x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
+  if (y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+  m.style.left = x + 'px'; m.style.top = y + 'px';
+  m.classList.add('open');
+}
+function closeCtx() { document.getElementById('ctxMenu').classList.remove('open'); }
+
+function ctxRename() {
+  closeCtx();
+  var node = findNode(fsRoot, ctxTargetId); if (!node) return;
+  showModal('Rename', '', { type: 'text', placeholder: node.name, value: node.name }, [
+    { label: 'Rename', cls: 'btn-primary', cb: function() {
+      var n = document.getElementById('modalTextInput').value.trim();
+      if (!n) return;
+      node.name = n; node.modified = Date.now();
+      saveToStorage(); renderFilesPage(); closeModal(); toast('Renamed', 'success');
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+function ctxOpen() { closeCtx(); var node = findNode(fsRoot, ctxTargetId); if (!node) return; if (node.type === 'folder') navTo(node.id); else openFileForEdit(node); }
+function ctxDownload() { closeCtx(); if (!ctxTargetId) return; selectedFiles.clear(); selectedFiles.add(ctxTargetId); downloadSelected(); }
+function ctxMove() { closeCtx(); moveSelected(); }
+function ctxDelete() { closeCtx(); deleteSelected(); }
+
+// ─── LOOKUP ───────────────────────────────────────
+function doLookup() {
+  var q = (document.getElementById('lookupInput').value || '').trim().toLowerCase();
+  if (!q) { toast('Enter a matricule', 'warn'); return; }
+  var results = [];
+  function searchFiles(node) {
+    if (node.type === 'file' && node.content) {
+      var lines = node.content.split('\n').filter(Boolean);
+      lines.forEach(function(line) {
+        var parts = line.split(',');
+        var mat = (parts[0] || '').trim().toLowerCase();
+        var code = (parts[1] || '').trim();
+        if (mat === q || mat.indexOf(q) !== -1) {
+          var fn = node.name.replace(/\.csv$/, '');
+          var fnParts = fn.split('_');
+          results.push({ course: fnParts[0] || fn, title: fnParts.slice(1).join(' '), examCode: code, matricule: (parts[0] || '').trim() });
+        }
+      });
+    }
+    if (node.children) node.children.forEach(function(c) { searchFiles(c); });
+  }
+  searchFiles(fsRoot);
+  var el = document.getElementById('lookupResult');
+  if (!results.length) {
+    el.innerHTML = '<div class="lookup-card"><div style="color:var(--text2);font-size:0.82rem;">No records found for <strong>' + escH(q) + '</strong>.</div></div>';
+    return;
+  }
+  var matDisplay = results[0].matricule;
+  var html = '<div class="lookup-card"><div class="lookup-title">Student: ' + escH(matDisplay) + '</div>' +
+    '<div style="font-size:0.72rem;color:var(--text3);">' + results.length + ' course(s) found</div>' +
+    '<table class="lookup-tbl"><thead><tr><th>#</th><th>Course Code</th><th>Course Title</th><th>Exam Code</th></tr></thead><tbody>';
+  results.forEach(function(r, i) {
+    html += '<tr><td>' + (i + 1) + '</td><td>' + escH(r.course) + '</td>' +
+      '<td style="font-family:var(--font);color:var(--text)">' + escH(r.title) + '</td>' +
+      '<td>' + escH(r.examCode) + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+// ─── MODAL ────────────────────────────────────────
+function showModal(title, body, inputCfg, actions) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').textContent = body;
+  var ia = document.getElementById('modalInputArea');
+  ia.innerHTML = '';
+  if (inputCfg) {
+    if (inputCfg.type === 'text') {
+      ia.innerHTML = '<input id="modalTextInput" class="finput" placeholder="' + escH(inputCfg.placeholder || '') + '" value="' + escH(inputCfg.value || '') + '">';
+      setTimeout(function() { var el = document.getElementById('modalTextInput'); if (el) el.focus(); }, 60);
+    } else if (inputCfg.type === 'select') {
+      ia.innerHTML = '<select id="modalSelectInput" class="finput">' + inputCfg.options + '</select>';
+    }
+  }
+  var ma = document.getElementById('modalActions');
+  ma.innerHTML = actions.map(function(a, i) {
+    return '<button class="btn ' + a.cls + '" id="mab' + i + '">' + escH(a.label) + '</button>';
+  }).join('');
+  actions.forEach(function(a, i) {
+    document.getElementById('mab' + i).onclick = a.cb;
+  });
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+// ─── SETTINGS ─────────────────────────────────────
+function applySettings() {
+  document.getElementById('set-autoAdvance').checked = settings.autoAdvance;
+  document.getElementById('set-autoPrefix').checked = settings.autoPrefix;
+  document.getElementById('set-autosave').checked = settings.autosave;
+}
+
+function saveSetting() {
+  settings.autoAdvance = document.getElementById('set-autoAdvance').checked;
+  settings.autoPrefix = document.getElementById('set-autoPrefix').checked;
+  settings.autosave = document.getElementById('set-autosave').checked;
+  saveToStorage();
+}
+
+function renderDictList() {
+  var dl = document.getElementById('dictList'); if (!dl) return;
+  var keys = Object.keys(courseDict);
+  if (!keys.length) { dl.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);font-style:italic">No courses saved yet.</div>'; return; }
+  dl.innerHTML = keys.sort().map(function(k) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">' +
+      '<span style="font-family:var(--mono);font-size:0.75rem;color:var(--accent);min-width:80px">' + escH(k) + '</span>' +
+      '<span style="font-size:0.75rem;color:var(--text2);flex:1">' + escH(courseDict[k]) + '</span>' +
+      '<button class="tbtn" title="Edit" onclick="editDictEntry(\'' + escH(k) + '\')">&#9999;&#65039;</button>' +
+      '<button class="tbtn d" onclick="delDictEntry(\'' + escH(k) + '\')">&#10005;</button>' +
+      '</div>';
+  }).join('');
+}
+
+function editDictEntry(code) {
+  showModal('Edit: ' + code, 'Enter new title for ' + code + ':', { type: 'text', placeholder: courseDict[code] || '', value: courseDict[code] || '' }, [
+    { label: 'Save', cls: 'btn-primary', cb: function() {
+      var v = document.getElementById('modalTextInput').value.trim();
+      if (!v) return;
+      courseDict[code] = v;
+      saveToStorage(); renderDictList(); closeModal(); toast('Updated: ' + code, 'success');
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+function addDictEntry() {
+  showModal('Add Dictionary Entry', 'Enter course code:', { type: 'text', placeholder: 'e.g. CUCH2101' }, [
+    { label: 'Next', cls: 'btn-primary', cb: function() {
+      var code = (document.getElementById('modalTextInput').value || '').trim().toUpperCase();
+      if (!code) return;
+      closeModal();
+      showModal('Add: ' + code, 'Enter course title:', { type: 'text', placeholder: 'e.g. Functional Chinese' }, [
+        { label: 'Save', cls: 'btn-primary', cb: function() {
+          var title = (document.getElementById('modalTextInput').value || '').trim();
+          if (!title) return;
+          courseDict[code] = title;
+          saveToStorage(); renderDictList(); closeModal(); toast('Added: ' + code, 'success');
+        }},
+        { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+      ]);
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+function delDictEntry(code) { delete courseDict[code]; saveToStorage(); renderDictList(); }
+
+function clearDictionary() {
+  showModal('Clear Dictionary?', 'Remove all saved course codes?', null, [
+    { label: 'Clear', cls: 'btn-danger', cb: function() { courseDict = {}; saveToStorage(); renderDictList(); closeModal(); toast('Dictionary cleared'); } },
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+function nukeStorage() {
+  showModal('Delete ALL Your Data?', 'Erase ALL your files, folders, courses and settings permanently?\n\nThis affects only your account — other users are unaffected.', null, [
+    { label: 'Delete Everything', cls: 'btn-danger', cb: function() {
+      closeModal();
+      rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
+      fsRoot = { name:'root', type:'folder', children:[], id:'root' };
+      curFolderId = 'root'; recycleBin = []; courseDict = {};
+      ['courseCode','courseTitle','examPrefix','numScripts','matricPrefix'].forEach(function(id) {
+        var el = document.getElementById(id); if (el) el.value = '';
+      });
+      renderTable(); updateStats(); renderFilesPage(); renderDictList(); renderOverview(); updateBinCount();
+      document.getElementById('doneBar').style.display = 'none';
+      document.getElementById('previewBox').textContent = '---';
+      saveToStorage();
+      logAct('clear_all', 'Cleared all personal data');
+      toast('All your data has been cleared', 'success');
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+// ─── WELCOME ──────────────────────────────────────
+function dismissWelcome() {
+  var ov = document.getElementById('welcomeOverlay');
+  if (!ov) return;
+  localStorage.setItem('ecb3_welcomed', '1');
+  ov.style.opacity = '0';
+  setTimeout(function() { ov.style.display = 'none'; }, 350);
+}
+
+function checkWelcomeOverlay() {
+  if (localStorage.getItem('ecb3_welcomed')) {
+    var ov = document.getElementById('welcomeOverlay');
+    if (ov) ov.style.display = 'none';
+  }
+}
+
+// ─── SILENCE APPLY ────────────────────────────────
+function applySilenceChange() {
+  appliedSilenceMs = parseInt(document.getElementById('silenceSlider').value) || 1000;
+  toast('Silence timeout set to ' + (appliedSilenceMs / 1000).toFixed(1) + 's', 'success');
+  autoSaveDebounced();
+}
+
+// ─── IMPORT FILE ──────────────────────────────────
+function importFile() {
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.csv,.txt';
+  inp.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var content = ev.target.result;
+      var fname = file.name;
+      var folder = findNode(fsRoot, curFolderId);
+      var existing = (folder.children || []).find(function(f) { return f.name === fname && f.type === 'file'; });
+      function doSaveImport() {
+        if (existing) { existing.content = content; existing.modified = Date.now(); }
+        else { folder.children.push({ id: genId(), name: fname, type: 'file', content: content, created: Date.now(), modified: Date.now() }); }
+        saveToStorage();
+        logAct('import', fname);
+        renderFilesPage();
+        toast('Imported: ' + fname, 'success');
+        showModal('Open in Builder?', 'Import saved. Open "' + fname + '" in the Builder now?', null, [
+          { label: 'Open in Builder', cls: 'btn-primary', cb: function() {
+            closeModal();
+            var node = (findNode(fsRoot, curFolderId).children || []).find(function(f) { return f.name === fname; });
+            if (node) openFileForEdit(node);
+          }},
+          { label: 'Stay in Files', cls: 'btn-ghost', cb: closeModal }
+        ]);
+      }
+      if (existing) {
+        showModal('File Already Exists', '"' + fname + '" already exists in this folder. Overwrite it?', null, [
+          { label: 'Overwrite', cls: 'btn-danger', cb: function() { closeModal(); doSaveImport(); } },
+          { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+        ]);
+      } else {
+        doSaveImport();
+      }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+// ─── OVERVIEW ─────────────────────────────────────
+function renderOverview() {
+  // Date/time header
+  var dtEl = document.getElementById('ovDateTime');
+  if (dtEl) dtEl.textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Collect all files recursively
+  var allFiles = [];
+  function collectFiles(node) {
+    if (node.type === 'file') { allFiles.push(node); return; }
+    (node.children || []).forEach(collectFiles);
+  }
+  collectFiles(fsRoot);
+
+  // Collect all matricules from all files
+  var allMatricules = [];
+  allFiles.forEach(function(f) {
+    (f.content || '').split('\n').forEach(function(line) {
+      var p = line.split(',');
+      var m = (p[0] || '').trim();
+      if (m) allMatricules.push(m);
+    });
+  });
+
+  // Count unique matricules
+  var uniqueMatrics = new Set(allMatricules.map(function(m){return m.toLowerCase();}));
+
+  // Count courses (files)
+  var totalCourses = allFiles.length;
+  var totalFolders = 0;
+  function countFolders(node) { if(node.type==='folder'&&node.id!=='root'){totalFolders++;} (node.children||[]).forEach(countFolders); }
+  countFolders(fsRoot);
+
+  // Duplicate count across all files
+  var seen = {}, dupeSet = new Set();
+  allMatricules.forEach(function(m){var k=m.toLowerCase();if(seen[k])dupeSet.add(k);else seen[k]=1;});
+
+  // KPIs
+  var kpiGrid = document.getElementById('ovKpiGrid');
+  if (kpiGrid) {
+    var inProg = rows.length > 0 ? 1 : 0;
+    var filled = rows.filter(function(r){return r.matricule&&r.matricule.trim();}).length;
+    kpiGrid.innerHTML = [
+      {cls:'c1', n: uniqueMatrics.size, l:'Total Students'},
+      {cls:'c2', n: totalCourses, l:'Saved Courses'},
+      {cls:'c3', n: totalFolders, l:'Folders'},
+      {cls:'c4', n: allMatricules.length, l:'Total Entries'},
+      {cls:'c5', n: dupeSet.size, l:'Cross-file Dupes'},
+      {cls:'c1', n: inProg ? (rows.length + ' rows / ' + filled + ' filled') : 'None', l:'Active Session'}
+    ].map(function(k){
+      return '<div class="ov-kpi '+k.cls+'"><div class="ov-kpi-n">'+k.n+'</div><div class="ov-kpi-l">'+k.l+'</div></div>';
+    }).join('');
+  }
+
+  // Matricule pattern statistics
+  var patternGrid = document.getElementById('ovPatternGrid');
+  if (patternGrid) {
+    var patMap = {};
+    allMatricules.forEach(function(m) {
+      // Extract pattern: letters+digits+letter(s) prefix, e.g. "UBa23R", "UBa24R", "UBa25R"
+      var match = m.match(/^([A-Za-z]+\d{2,4}[A-Za-z]*)/);
+      var key = match ? match[1] : m.substring(0,6);
+      patMap[key] = (patMap[key] || 0) + 1;
+    });
+    var patterns = Object.keys(patMap).sort();
+    if (!patterns.length) {
+      patternGrid.innerHTML = '<div class="ov-empty">No matricule data yet. Save files to see patterns.</div>';
+    } else {
+      patternGrid.innerHTML = patterns.map(function(p) {
+        return '<div class="ov-pattern"><div class="ov-pattern-key">'+escH(p)+'</div>'+
+          '<div class="ov-pattern-count">'+patMap[p]+'</div>'+
+          '<div class="ov-pattern-label">students</div></div>';
+      }).join('');
+    }
+  }
+
+  // Recent files (last 5 by modified date)
+  var recentEl = document.getElementById('ovRecentFiles');
+  if (recentEl) {
+    var sorted = allFiles.slice().sort(function(a,b){return(b.modified||0)-(a.modified||0);}).slice(0,5);
+    if (!sorted.length) {
+      recentEl.innerHTML = '<div class="ov-empty">No saved files yet.</div>';
+    } else {
+      recentEl.innerHTML = sorted.map(function(f) {
+        var ts = f.modified ? new Date(f.modified).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+        var lines = (f.content||'').split('\n').filter(Boolean).length;
+        var fn = (f.name || '').replace(/\.csv$/,'');
+        var parts = fn.split('_');
+        return '<div class="ov-row">'+
+          '<div class="ov-row-icon">&#128196;</div>'+
+          '<div class="ov-row-main">'+
+            '<div class="ov-row-title">'+escH(parts[0]||f.name)+'</div>'+
+            '<div class="ov-row-sub">'+escH(parts.slice(1).join(' '))+(ts?' &bull; '+ts:'')+'</div>'+
+          '</div>'+
+          '<span class="ov-row-badge badge-info">'+lines+' rows</span>'+
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // In-progress session
+  var inProgEl = document.getElementById('ovInProgress');
+  if (inProgEl) {
+    if (!rows.length) {
+      inProgEl.innerHTML = '<div class="ov-empty">No active session. Go to Builder to start one.</div>';
+    } else {
+      var filledRows = rows.filter(function(r){return r.matricule&&r.matricule.trim();}).length;
+      var pct = rows.length ? Math.round(filledRows/rows.length*100) : 0;
+      var code = document.getElementById('courseCode') ? document.getElementById('courseCode').value : '';
+      var title = document.getElementById('courseTitle') ? document.getElementById('courseTitle').value : '';
+      var badgeCls = pct === 100 ? 'badge-ok' : 'badge-warn';
+      inProgEl.innerHTML = '<div class="ov-row">'+
+        '<div class="ov-row-icon">&#9999;&#65039;</div>'+
+        '<div class="ov-row-main">'+
+          '<div class="ov-row-title">'+(code?escH(code):' Session in progress')+(title?' — '+escH(title):'')+'</div>'+
+          '<div class="ov-row-sub">'+filledRows+' / '+rows.length+' matricules filled</div>'+
+        '</div>'+
+        '<span class="ov-row-badge '+badgeCls+'">'+pct+'%</span>'+
+        '<button class="btn btn-primary btn-sm" onclick="switchPage(\'builder\')" style="margin-left:4px">Resume</button>'+
+      '</div>';
+    }
+  }
+
+  // Course summary from dictionary
+  var coursesEl = document.getElementById('ovCourses');
+  if (coursesEl) {
+    var codes = Object.keys(courseDict);
+    if (!codes.length) {
+      coursesEl.innerHTML = '<div class="ov-empty">No courses in dictionary yet.</div>';
+    } else {
+      coursesEl.innerHTML = codes.sort().map(function(c) {
+        return '<div class="ov-row">'+
+          '<div class="ov-row-icon">&#128218;</div>'+
+          '<div class="ov-row-main">'+
+            '<div class="ov-row-title">'+escH(c)+'</div>'+
+            '<div class="ov-row-sub">'+escH(courseDict[c])+'</div>'+
+          '</div>'+
+          '<span class="ov-row-badge badge-info">saved</span>'+
+        '</div>';
+      }).join('');
+    }
+  }
+}
+
+// ─── TOAST ────────────────────────────────────────
+function toast(msg, type) {
+  var icons = { success: '&#9989;', error: '&#10060;', warn: '&#9888;&#65039;' };
+  var el = document.createElement('div');
+  el.className = 'toast ' + (type || '');
+  el.innerHTML = '<span>' + (icons[type] || 'ℹ') + '</span>' + escH(msg);
+  var tc = document.getElementById('toasts');
+  if (tc) tc.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; }, 2700);
+  setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 3100);
+}
+
+/* ════════════════════════════════════════════════════════════
+   ONLINE LAYER — auth controller, activity log & admin console
+   (talks to the Firebase facade defined in the module below: window.FB)
+   ════════════════════════════════════════════════════════════ */
+
+function setText(id, t) { var el = document.getElementById(id); if (el) el.textContent = t; }
+function escAttr(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+function computeStats() {
+  var files = 0, mats = 0;
+  (function walk(n) {
+    if (n.type === 'file') { files++; mats += (n.content || '').split('\n').filter(Boolean).length; }
+    (n.children || []).forEach(walk);
+  })(fsRoot);
+  return { docs: files, mats: mats };
+}
+
+function friendlyAuthError(e) {
+  var c = (e && e.code) ? e.code : '';
+  var map = {
+    'auth/invalid-email': 'That email address looks invalid.',
+    'auth/user-disabled': 'This account has been disabled.',
+    'auth/user-not-found': 'No account found with that email.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/invalid-login-credentials': 'Incorrect email or password.',
+    'auth/email-already-in-use': 'An account with that email already exists.',
+    'auth/weak-password': 'Password should be at least 6 characters.',
+    'auth/too-many-requests': 'Too many attempts — please wait a moment and try again.',
+    'auth/network-request-failed': 'Network error. Check your internet connection.',
+    'auth/operation-not-allowed': 'Email/Password sign-in is not enabled in Firebase.',
+    'auth/not-owner': 'This email is not the configured owner email.'
+  };
+  if (map[c]) return map[c];
+  if (e && e.message) return String(e.message).replace('Firebase: ', '');
+  return 'Something went wrong. Please try again.';
+}
+
+function genTempPass() {
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  var s = ''; for (var i = 0; i < 10; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+  return s;
+}
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  var d = (typeof ts === 'number') ? ts : (ts && ts.seconds ? ts.seconds * 1000 : Date.parse(ts));
+  if (!d || isNaN(d)) return '—';
+  var diff = Date.now() - d, mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60); if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24); if (days < 30) return days + 'd ago';
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// ─── AUTH SCREEN UI ───────────────────────────────
+function authTab(which) {
+  appClearAuthMsg();
+  var isSign = which !== 'setup';
+  document.getElementById('tabSignin').classList.toggle('active', isSign);
+  document.getElementById('tabSetup').classList.toggle('active', !isSign);
+  document.getElementById('formSignin').style.display = isSign ? 'block' : 'none';
+  document.getElementById('formSetup').style.display = isSign ? 'none' : 'block';
+}
+function togglePass(id, el) {
+  var i = document.getElementById(id); if (!i) return;
+  if (i.type === 'password') { i.type = 'text'; el.style.color = 'var(--accent)'; }
+  else { i.type = 'password'; el.style.color = ''; }
+}
+function appClearAuthMsg() { ['authErr', 'authOk'].forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.remove('show'); }); }
+function appShowAuthError(msg) { appClearAuthMsg(); var e = document.getElementById('authErr'); if (e) { e.textContent = msg; e.classList.add('show'); } var s = document.getElementById('authScreen'); if (s) s.style.display = 'flex'; }
+function appShowAuthOk(msg) { appClearAuthMsg(); var o = document.getElementById('authOk'); if (o) { o.textContent = msg; o.classList.add('show'); } }
+function appOnConfigReady(ok, msg) {
+  var warn = document.getElementById('authConfigWarn'), forms = document.getElementById('authForms');
+  if (ok) { if (warn) warn.style.display = 'none'; if (forms) forms.style.display = 'block'; }
+  else { if (warn) { warn.style.display = 'block'; warn.classList.add('show'); warn.innerHTML = msg || 'Configuration required.'; } if (forms) forms.style.display = 'none'; }
+}
+
+async function appSignIn() {
+  appClearAuthMsg();
+  var email = (document.getElementById('siEmail').value || '').trim();
+  var pass = document.getElementById('siPass').value || '';
+  if (!email || !pass) { appShowAuthError('Enter your email and password.'); return; }
+  var btn = document.getElementById('siBtn'); btn.classList.add('auth-busy'); btn.textContent = 'Signing in…';
+  try { await window.FB.signIn(email, pass); }
+  catch (e) { appShowAuthError(friendlyAuthError(e)); }
+  finally { btn.classList.remove('auth-busy'); btn.textContent = 'Sign In'; }
+}
+async function appSetupOwner() {
+  appClearAuthMsg();
+  var name = (document.getElementById('suName').value || '').trim();
+  var email = (document.getElementById('suEmail').value || '').trim();
+  var pass = document.getElementById('suPass').value || '';
+  if (!email || !pass) { appShowAuthError('Enter the owner email and a password.'); return; }
+  if (pass.length < 6) { appShowAuthError('Password must be at least 6 characters.'); return; }
+  if (window.FB.isOwnerEmail && !window.FB.isOwnerEmail(email)) { appShowAuthError('This email is not the configured owner email. Ask your administrator to create your account.'); return; }
+  var btn = document.getElementById('suBtn'); btn.classList.add('auth-busy'); btn.textContent = 'Creating…';
+  try { await window.FB.registerOwner(email, pass, name); }
+  catch (e) { appShowAuthError(friendlyAuthError(e)); }
+  finally { btn.classList.remove('auth-busy'); btn.textContent = 'Create Owner Account'; }
+}
+async function appForgot() {
+  appClearAuthMsg();
+  var email = (document.getElementById('siEmail').value || '').trim();
+  if (!email) { appShowAuthError('Type your email above first, then tap “Forgot password”.'); return; }
+  try { await window.FB.sendReset(email); appShowAuthOk('Password reset email sent to ' + email + '. Check your inbox.'); }
+  catch (e) { appShowAuthError(friendlyAuthError(e)); }
+}
+function appSignOut() {
+  showModal('Sign Out?', 'Your work is already saved to the cloud. Sign out now?', null, [
+    { label: 'Sign Out', cls: 'btn-danger', cb: function() { closeModal(); logAct('logout', 'Signed out'); if (window.FB) window.FB.signOutUser(); } },
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+// ─── AUTH STATE HOOKS (called by the module) ──────
+async function appOnLogin(user, profile) {
+  currentUser = { uid: user.uid, email: user.email };
+  currentProfile = profile;
+  isAdminAccount = !!(profile && profile.role === 'superadmin') || (window.FB && window.FB.isOwnerEmail && window.FB.isOwnerEmail(user.email));
+
+  var initials = ((profile && profile.displayName) || user.email || '?').trim().charAt(0).toUpperCase();
+  setText('userAvatar', initials || '?');
+  setText('userName', (profile && profile.displayName) || user.email);
+  setText('userRole', isAdminAccount ? 'Super-admin' : 'User');
+  document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = isAdminAccount ? '' : 'none'; });
+
+  stateLoaded = false;
+  setSaveLabel('Loading…');
+  appShowAuthOk('Loading your workspace…');
+  try { var payload = await window.FB.loadState(); applyLoadedState(payload); }
+  catch (e) { console.warn('load failed', e); toast('Could not load your data: ' + (e && e.message ? e.message : 'error'), 'error'); }
+  stateLoaded = true;
+
+  purgeExpiredBin(); updateBinCount(); renderFilesPage(); renderDictList(); applySettings(); updateStats(); updatePreview(); renderOverview();
+
+  document.getElementById('authScreen').style.display = 'none';
+  appClearAuthMsg();
+  setSaveLabel('Synced');
+  switchPage('overview');
+  logAct('login', 'Signed in');
+}
+
+function appOnLogout() {
+  currentUser = null; currentProfile = null; isAdminAccount = false; stateLoaded = false;
+  rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
+  fsRoot = { name:'root', type:'folder', children:[], id:'root' }; curFolderId = 'root';
+  recycleBin = []; courseDict = {}; adminUsersCache = []; adminActivityCache = [];
+  ['courseCode','courseTitle','examPrefix','numScripts','matricPrefix'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  try { renderTable(); updateStats(); } catch (e) {}
+  document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = 'none'; });
+  var as = document.getElementById('authScreen'); if (as) as.style.display = 'flex';
+  authTab('signin');
+  ['siPass','suPass'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  setSaveLabel('Signed out');
+}
+
+function logAct(action, detail) {
+  try { if (currentUser && window.FB && window.FB.logActivity) window.FB.logActivity(action, detail); } catch (e) {}
+}
+
+// ─── ADMIN CONSOLE ────────────────────────────────
+function renderAdmin() {
+  if (!isAdminAccount) {
+    document.getElementById('adminUserRows').innerHTML = '<tr><td colspan="6" class="admin-empty">Access denied.</td></tr>';
+    document.getElementById('adminStats').innerHTML = '';
+    return;
+  }
+  if (!adminUsersCache.length && !adminActivityCache.length) { adminRefresh(); return; }
+  renderAdminStats(); renderAdminUsers(); renderAdminActivity();
+}
+async function adminRefresh() {
+  if (!isAdminAccount) return;
+  document.getElementById('adminUserRows').innerHTML = '<tr><td colspan="6" class="admin-empty">Loading users…</td></tr>';
+  document.getElementById('adminActivityList').innerHTML = '<div class="admin-empty">Loading activity…</div>';
+  try { adminUsersCache = await window.FB.listUsers(); }
+  catch (e) { adminUsersCache = []; toast('Could not load users: ' + (e && e.message ? e.message : 'error'), 'error'); }
+  try { adminActivityCache = await window.FB.listActivity(200); }
+  catch (e) { adminActivityCache = []; }
+  renderAdminStats(); renderAdminUsers(); renderAdminActivity();
+}
+function adminTab(which) {
+  var u = which === 'users';
+  document.getElementById('atUsers').classList.toggle('active', u);
+  document.getElementById('atActivity').classList.toggle('active', !u);
+  document.getElementById('adminUsers').classList.toggle('active', u);
+  document.getElementById('adminActivity').classList.toggle('active', !u);
+}
+function renderAdminStats() {
+  var total = adminUsersCache.length;
+  var admins = adminUsersCache.filter(function(u) { return u.role === 'superadmin'; }).length;
+  var disabled = adminUsersCache.filter(function(u) { return u.disabled; }).length;
+  var docs = adminUsersCache.reduce(function(a, u) { return a + ((u.stats && u.stats.docs) || 0); }, 0);
+  function st(n, l) { return '<div class="admin-stat"><div class="n">' + n + '</div><div class="l">' + l + '</div></div>'; }
+  document.getElementById('adminStats').innerHTML = st(total, 'Total Users') + st(admins, 'Super-admins') + st(total - disabled, 'Active') + st(docs, 'Documents');
+}
+function renderAdminUsers() {
+  var q = (document.getElementById('adminUserSearch').value || '').trim().toLowerCase();
+  var list = adminUsersCache.filter(function(u) { return !q || (u.email || '').toLowerCase().indexOf(q) !== -1 || (u.displayName || '').toLowerCase().indexOf(q) !== -1; });
+  list.sort(function(a, b) { return (a.displayName || a.email || '').localeCompare(b.displayName || b.email || ''); });
+  var tb = document.getElementById('adminUserRows');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="admin-empty">No users found.</td></tr>'; return; }
+  tb.innerHTML = list.map(function(u) {
+    var isSelf = currentUser && u.uid === currentUser.uid;
+    var rolePill = u.role === 'superadmin' ? '<span class="pill pill-admin">Super-admin</span>' : '<span class="pill pill-user">User</span>';
+    var statusPill = u.disabled ? '<span class="pill pill-disabled">Disabled</span>' : '<span class="pill pill-active">Active</span>';
+    var docs = (u.stats && u.stats.docs != null) ? u.stats.docs : '—';
+    var mats = (u.stats && u.stats.mats != null) ? (' <span style="color:var(--text3)">• ' + u.stats.mats + ' mat.</span>') : '';
+    var last = u.lastLogin ? timeAgo(u.lastLogin) : '—';
+    var em = escAttr(u.email);
+    var acts = '<div class="row-actions">' +
+      '<button class="mini-btn" onclick="adminResetPassword(\'' + em + '\')">Reset PW</button>' +
+      (isSelf ? '' : '<button class="mini-btn ' + (u.disabled ? 'good' : 'danger') + '" onclick="adminToggleDisable(\'' + u.uid + '\',' + (u.disabled ? 'true' : 'false') + ',\'' + em + '\')">' + (u.disabled ? 'Enable' : 'Disable') + '</button>') +
+      (isSelf ? '' : '<button class="mini-btn" onclick="adminSetRole(\'' + u.uid + '\',\'' + (u.role || 'user') + '\',\'' + em + '\')">' + (u.role === 'superadmin' ? 'Make User' : 'Make Admin') + '</button>') +
+      (isSelf ? '' : '<button class="mini-btn danger" onclick="adminDeleteData(\'' + u.uid + '\',\'' + em + '\')">Wipe</button>') +
+      '</div>';
+    return '<tr>' +
+      '<td><div style="font-weight:600">' + escH(u.displayName || '—') + (isSelf ? ' <span class="pill pill-user">you</span>' : '') + '</div><div style="font-size:0.7rem;color:var(--text2)">' + escH(u.email || '') + '</div></td>' +
+      '<td>' + rolePill + '</td><td>' + statusPill + '</td>' +
+      '<td>' + docs + mats + '</td>' +
+      '<td style="font-size:0.72rem;color:var(--text2)">' + last + '</td>' +
+      '<td>' + acts + '</td></tr>';
+  }).join('');
+}
+function renderAdminActivity() {
+  var q = (document.getElementById('adminActSearch').value || '').trim().toLowerCase();
+  var list = adminActivityCache.filter(function(a) { return !q || (a.email || '').toLowerCase().indexOf(q) !== -1 || (a.action || '').toLowerCase().indexOf(q) !== -1 || (a.detail || '').toLowerCase().indexOf(q) !== -1; });
+  var el = document.getElementById('adminActivityList');
+  if (!list.length) { el.innerHTML = '<div class="admin-empty">No activity recorded yet.</div>'; return; }
+  var icons = { login:'&#128273;', logout:'&#128682;', save_doc:'&#128190;', import:'&#11014;&#65039;', export:'&#11015;&#65039;', folder:'&#128193;', delete:'&#128465;&#65039;', clear_all:'&#9888;&#65039;', admin_create_user:'&#10133;', admin_disable:'&#9940;', admin_enable:'&#9989;', admin_role:'&#128737;&#65039;', admin_reset:'&#128273;', admin_wipe:'&#129529;' };
+  el.innerHTML = list.map(function(a) {
+    var ic = icons[a.action] || '&#8226;';
+    return '<div class="activity-item"><div class="act-icon">' + ic + '</div>' +
+      '<div class="act-main"><span class="act-who">' + escH(a.email || 'unknown') + '</span> <span class="act-detail">' + escH(a.detail || a.action) + '</span></div>' +
+      '<div class="act-time">' + timeAgo(a.ts) + '</div></div>';
+  }).join('');
+}
+function adminCreateUserDialog() {
+  if (!isAdminAccount) return;
+  var inputHtml =
+    '<div class="auth-field"><div class="flabel">Display Name</div><input class="finput" id="cuName" placeholder="e.g. Jane Doe"></div>' +
+    '<div class="auth-field"><div class="flabel">Email</div><input class="finput" id="cuEmail" type="email" placeholder="user@example.com"></div>' +
+    '<div class="auth-field"><div class="flabel">Temporary Password</div><div class="auth-pass-wrap"><input class="finput" id="cuPass" type="text" value="' + genTempPass() + '"><span class="pass-eye" title="Regenerate" onclick="document.getElementById(\'cuPass\').value=genTempPass()">&#8635;</span></div></div>' +
+    '<div class="auth-field"><div class="flabel">Role</div><select class="finput" id="cuRole"><option value="user">User (own documents only)</option><option value="superadmin">Super-admin (manage everyone)</option></select></div>';
+  showRawModal('Create User Account', 'The user signs in with this email + temporary password. Share it securely; they can change it later via “Forgot password”.', inputHtml, [
+    { label: 'Create Account', cls: 'btn-primary', cb: adminDoCreateUser },
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+async function adminDoCreateUser() {
+  var name = (document.getElementById('cuName').value || '').trim();
+  var email = (document.getElementById('cuEmail').value || '').trim();
+  var pass = (document.getElementById('cuPass').value || '').trim();
+  var role = document.getElementById('cuRole').value;
+  if (!email || !pass) { toast('Email and password are required', 'warn'); return; }
+  if (pass.length < 6) { toast('Password must be at least 6 characters', 'warn'); return; }
+  var btn = document.getElementById('mab0'); if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+  try {
+    await window.FB.createUserAccount({ email: email, password: pass, displayName: name, role: role });
+    logAct('admin_create_user', 'Created account ' + email + ' (' + role + ')');
+    closeModal();
+    showRawModal('Account Created &#9989;', 'Share these credentials securely with the user:',
+      '<div class="cred-box"><div><span class="k">Email:</span> ' + escH(email) + '</div><div style="margin-top:5px"><span class="k">Password:</span> ' + escH(pass) + '</div></div>',
+      [{ label: 'Done', cls: 'btn-primary', cb: function() { closeModal(); adminRefresh(); } }]);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+    toast('Create failed: ' + friendlyAuthError(e), 'error');
+  }
+}
+async function adminResetPassword(email) {
+  try { await window.FB.sendReset(email); logAct('admin_reset', 'Sent password reset to ' + email); toast('Reset email sent to ' + email, 'success'); }
+  catch (e) { toast('Could not send reset: ' + friendlyAuthError(e), 'error'); }
+}
+function adminToggleDisable(uid, currentlyDisabled, email) {
+  var target = !currentlyDisabled, verb = target ? 'Disable' : 'Enable';
+  showModal(verb + ' user?', verb + ' ' + email + '?' + (target ? '\n\nThey will be blocked from signing in and from touching any data immediately.' : '\n\nThey will regain full access.'), null, [
+    { label: verb, cls: target ? 'btn-danger' : 'btn-primary', cb: async function() {
+      try { await window.FB.setDisabled(uid, target); logAct(target ? 'admin_disable' : 'admin_enable', (target ? 'Disabled ' : 'Enabled ') + email); closeModal(); adminRefresh(); toast(email + ' ' + (target ? 'disabled' : 'enabled'), 'success'); }
+      catch (e) { toast('Failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+function adminSetRole(uid, currentRole, email) {
+  var newRole = currentRole === 'superadmin' ? 'user' : 'superadmin';
+  showModal('Change role?', 'Set ' + email + ' as ' + (newRole === 'superadmin' ? 'Super-admin (full access to manage all users & data)' : 'a standard User') + '?', null, [
+    { label: 'Change Role', cls: 'btn-primary', cb: async function() {
+      try { await window.FB.setRole(uid, newRole); logAct('admin_role', 'Set ' + email + ' role to ' + newRole); closeModal(); adminRefresh(); toast('Role updated', 'success'); }
+      catch (e) { toast('Failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+function adminDeleteData(uid, email) {
+  showModal('Wipe user data?', 'This permanently deletes ALL of ' + email + '\u2019s files, folders and settings, and disables the account.\n\nThe login credential can only be fully removed from the Firebase Console (Authentication tab). Continue?', null, [
+    { label: 'Wipe & Disable', cls: 'btn-danger', cb: async function() {
+      try { await window.FB.deleteUserData(uid); await window.FB.setDisabled(uid, true); logAct('admin_wipe', 'Wiped data & disabled ' + email); closeModal(); adminRefresh(); toast(email + ' data wiped & account disabled', 'success'); }
+      catch (e) { toast('Failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+// modal that accepts arbitrary input HTML (used for the create-user form)
+function showRawModal(title, bodyText, inputHtml, actions) {
+  document.getElementById('modalTitle').innerHTML = title;
+  document.getElementById('modalBody').textContent = bodyText || '';
+  document.getElementById('modalInputArea').innerHTML = inputHtml || '';
+  var ma = document.getElementById('modalActions');
+  ma.innerHTML = actions.map(function(a, i) { return '<button class="btn ' + a.cls + '" id="mab' + i + '">' + a.label + '</button>'; }).join('');
+  actions.forEach(function(a, i) { document.getElementById('mab' + i).onclick = a.cb; });
+  document.getElementById('modalOverlay').classList.add('open');
+}
+</script>
+
+<!-- ════════════ CLOUD ENGINE (Firebase + pako) ════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, orderBy, limit, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js';
+
+/* ════════════════════════════════════════════════════════════════════
+   ⬇⬇⬇   STEP 1 — PASTE YOUR FIREBASE CONFIG HERE   ⬇⬇⬇
+   (Firebase Console → Project settings → "Your apps" → Web app → config)
+   ════════════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey:            "PASTE_API_KEY",
+  authDomain:        "PASTE_PROJECT.firebaseapp.com",
+  projectId:         "PASTE_PROJECT_ID",
+  storageBucket:     "PASTE_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_SENDER_ID",
+  appId:             "PASTE_APP_ID"
+};
+
+/* ⬇⬇⬇   STEP 2 — SET THE OWNER / SUPER-ADMIN EMAIL   ⬇⬇⬇
+   This exact email becomes the super-admin via "First-time Setup".
+   It must also match the OWNER_EMAIL inside your Firestore security rules. */
+const OWNER_EMAIL = "owner@example.com";
+/* ════════════════════════════════════════════════════════════════════ */
+
+const ownerEmail = () => (OWNER_EMAIL || '').trim().toLowerCase();
+const isOwnerEmail = (e) => (e || '').trim().toLowerCase() === ownerEmail();
+const CONFIGURED = firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('PASTE_') !== 0
+                && firebaseConfig.projectId && firebaseConfig.projectId.indexOf('PASTE_') !== 0;
+
+if (!CONFIGURED) {
+  window.FB = { isOwnerEmail, ownerEmail };
+  if (window.appOnConfigReady) window.appOnConfigReady(false,
+    '&#9881;&#65039; <strong>Setup needed.</strong> Open <code>index.html</code> and paste your Firebase config &amp; owner email near the bottom of the file, then reload. See the included <strong>README</strong> for the full walkthrough.');
+} else {
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ---- helpers: base64 <-> bytes, lightweight hash ----
+  const bytesToB64 = (bytes) => { let bin=''; const ch=0x8000; for (let i=0;i<bytes.length;i+=ch) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+ch)); return btoa(bin); };
+  const b64ToBytes = (b64) => { const bin=atob(b64); const n=bin.length; const out=new Uint8Array(n); for (let i=0;i<n;i++) out[i]=bin.charCodeAt(i); return out; };
+  const hashStr = (s) => { let h=5381; for (let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0; return (h>>>0).toString(36)+'_'+s.length; };
+  const CHUNK = 760000; // chars/chunk — safely under Firestore's ~1 MiB field limit
+  let lastSavedHash = null;
+  let pendingOwnerName = null;
+
+  async function ensureProfileForLogin(user) {
+    const ref = doc(db, 'users', user.uid);
+    let snap = null;
+    try { snap = await getDoc(ref); } catch (e) {}
+    if (snap && snap.exists()) {
+      const data = snap.data();
+      const patch = { lastLogin: serverTimestamp() };
+      // self-heal: keep the configured owner as super-admin no matter what
+      if (isOwnerEmail(user.email) && data.role !== 'superadmin') { patch.role = 'superadmin'; patch.disabled = false; }
+      try { await setDoc(ref, patch, { merge: true }); } catch (e) {}
+      if (patch.role) { data.role = 'superadmin'; data.disabled = false; }
+      return data;
+    }
+    // No profile yet — only the configured OWNER may self-provision (bootstrap).
+    if (isOwnerEmail(user.email)) {
+      const prof = { email: user.email, displayName: pendingOwnerName || user.displayName || user.email.split('@')[0], role: 'superadmin', disabled: false, createdAt: serverTimestamp(), createdBy: 'self', lastLogin: serverTimestamp() };
+      pendingOwnerName = null;
+      await setDoc(ref, prof);
+      return prof;
+    }
+    return null; // not provisioned by an admin
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { lastSavedHash = null; if (window.appOnLogout) window.appOnLogout(); return; }
+    let profile = null;
+    try { profile = await ensureProfileForLogin(user); } catch (e) { console.warn(e); }
+    if (!profile) { await signOut(auth); if (window.appShowAuthError) window.appShowAuthError('Your account is not set up. Please ask your administrator to create your account.'); return; }
+    if (profile.disabled) { await signOut(auth); if (window.appShowAuthError) window.appShowAuthError('This account has been disabled. Contact your administrator.'); return; }
+    lastSavedHash = null;
+    if (window.appOnLogin) window.appOnLogin(user, profile);
+  });
+
+  // secondary app instance → create users without disturbing the admin's session
+  let secAuth = null;
+  const getSecondary = () => { if (!secAuth) secAuth = getAuth(initializeApp(firebaseConfig, 'provisioner')); return secAuth; };
+
+  window.FB = {
+    isOwnerEmail, ownerEmail,
+
+    signIn:        (email, pass)        => signInWithEmailAndPassword(auth, email, pass),
+    signOutUser:   ()                   => signOut(auth),
+    sendReset:     (email)              => sendPasswordResetEmail(auth, email),
+    async registerOwner(email, pass, name) {
+      if (!isOwnerEmail(email)) throw { code: 'auth/not-owner' };
+      pendingOwnerName = name || null;
+      return createUserWithEmailAndPassword(auth, email, pass);
+    },
+
+    // ── per-user state: serialize → gzip → split into chunks ──
+    async saveState(payloadStr, stats) {
+      const h = hashStr(payloadStr);
+      if (h === lastSavedHash) return { skipped: true };
+      const uid = auth.currentUser.uid;
+      const b64 = bytesToB64(pako.deflate(payloadStr));
+      const nChunks = Math.max(1, Math.ceil(b64.length / CHUNK));
+      const batch = writeBatch(db);
+      for (let i = 0; i < nChunks; i++)
+        batch.set(doc(db, 'users', uid, 'state', 'chunk_' + i), { d: b64.slice(i * CHUNK, (i + 1) * CHUNK), i });
+      batch.set(doc(db, 'users', uid, 'state', 'meta'), { chunks: nChunks, alg: 'gzip+b64', hash: h, v: 1, updatedAt: serverTimestamp() });
+      if (stats) batch.set(doc(db, 'users', uid), { stats: { docs: stats.docs || 0, mats: stats.mats || 0, updatedAt: Date.now() } }, { merge: true });
+      await batch.commit();
+      // best-effort cleanup of now-unused chunks
+      try {
+        const all = await getDocs(collection(db, 'users', uid, 'state'));
+        const dels = [];
+        all.forEach(d => { const m = d.id.match(/^chunk_(\d+)$/); if (m && parseInt(m[1]) >= nChunks) dels.push(deleteDoc(d.ref)); });
+        if (dels.length) await Promise.all(dels);
+      } catch (e) {}
+      lastSavedHash = h;
+      return { ok: true, chunks: nChunks };
+    },
+    async loadState() {
+      const uid = auth.currentUser.uid;
+      let metaSnap = null;
+      try { metaSnap = await getDoc(doc(db, 'users', uid, 'state', 'meta')); } catch (e) { return null; }
+      if (!metaSnap || !metaSnap.exists()) return null;
+      const meta = metaSnap.data();
+      const n = meta.chunks || 0;
+      if (!n) return null;
+      const parts = new Array(n).fill('');
+      const snap = await getDocs(collection(db, 'users', uid, 'state'));
+      snap.forEach(d => { const m = d.id.match(/^chunk_(\d+)$/); if (m) { const idx = parseInt(m[1]); if (idx < n) parts[idx] = (d.data().d || ''); } });
+      try {
+        const str = pako.inflate(b64ToBytes(parts.join('')), { to: 'string' });
+        lastSavedHash = meta.hash || hashStr(str);
+        return JSON.parse(str);
+      } catch (e) { console.warn('inflate/parse failed', e); return null; }
+    },
+
+    // ── activity log ──
+    async logActivity(action, detail) {
+      const u = auth.currentUser; if (!u) return;
+      try { await addDoc(collection(db, 'activity'), { uid: u.uid, email: u.email, action, detail: (detail || '').slice(0, 300), ts: serverTimestamp() }); } catch (e) {}
+    },
+    async listActivity(max) {
+      const snap = await getDocs(query(collection(db, 'activity'), orderBy('ts', 'desc'), limit(max || 200)));
+      const out = []; snap.forEach(d => { const x = d.data(); out.push({ uid: x.uid, email: x.email, action: x.action, detail: x.detail, ts: x.ts && x.ts.toMillis ? x.ts.toMillis() : null }); });
+      return out;
+    },
+
+    // ── admin: users ──
+    async listUsers() {
+      const snap = await getDocs(collection(db, 'users'));
+      const out = []; snap.forEach(d => { const x = d.data(); out.push({ uid: d.id, email: x.email, displayName: x.displayName, role: x.role || 'user', disabled: !!x.disabled, stats: x.stats || null, lastLogin: x.lastLogin && x.lastLogin.toMillis ? x.lastLogin.toMillis() : null, createdAt: x.createdAt && x.createdAt.toMillis ? x.createdAt.toMillis() : null }); });
+      return out;
+    },
+    async createUserAccount({ email, password, displayName, role }) {
+      const sec = getSecondary();
+      const cred = await createUserWithEmailAndPassword(sec, email, password);
+      const uid = cred.user.uid;
+      await setDoc(doc(db, 'users', uid), { email, displayName: displayName || email.split('@')[0], role: role === 'superadmin' ? 'superadmin' : 'user', disabled: false, createdAt: serverTimestamp(), createdBy: auth.currentUser ? auth.currentUser.email : 'admin' });
+      try { await signOut(sec); } catch (e) {}
+      return uid;
+    },
+    setDisabled: (uid, disabled) => setDoc(doc(db, 'users', uid), { disabled: !!disabled }, { merge: true }),
+    setRole:     (uid, role)     => setDoc(doc(db, 'users', uid), { role: role === 'superadmin' ? 'superadmin' : 'user' }, { merge: true }),
+    async deleteUserData(uid) {
+      const sub = await getDocs(collection(db, 'users', uid, 'state'));
+      const dels = []; sub.forEach(d => dels.push(deleteDoc(d.ref)));
+      if (dels.length) await Promise.all(dels);
+      try { await setDoc(doc(db, 'users', uid), { stats: { docs: 0, mats: 0, updatedAt: Date.now() } }, { merge: true }); } catch (e) {}
+      return true;
+    }
+  };
+
+  if (window.appOnConfigReady) window.appOnConfigReady(true);
+}
+</script>
+
+</body>
+</html>
