@@ -3036,18 +3036,19 @@ import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addD
    (Firebase Console → Project settings → "Your apps" → Web app → config)
    ════════════════════════════════════════════════════════════════════ */
 const firebaseConfig = {
-  apiKey:            "PASTE_API_KEY",
-  authDomain:        "PASTE_PROJECT.firebaseapp.com",
-  projectId:         "PASTE_PROJECT_ID",
-  storageBucket:     "PASTE_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId:             "PASTE_APP_ID"
+  apiKey:            "AIzaSyCobLDQ5C8bpLDAJu88w7pYjQTMcEaeU1U",
+  authDomain:        "examcode-builder.firebaseapp.com",
+  projectId:         "examcode-builder",
+  storageBucket:     "examcode-builder.firebasestorage.app",
+  messagingSenderId: "1027102595516",
+  appId:             "1:1027102595516:web:47568f5b1df2dd6d8af3b9",
+  measurementId:     "G-2QD4BPWCHB"
 };
 
 /* ⬇⬇⬇   STEP 2 — SET THE OWNER / SUPER-ADMIN EMAIL   ⬇⬇⬇
    This exact email becomes the super-admin via "First-time Setup".
    It must also match the OWNER_EMAIL inside your Firestore security rules. */
-const OWNER_EMAIL = "owner@example.com";
+const OWNER_EMAIL = "237ceejay@gmail.com";
 /* ════════════════════════════════════════════════════════════════════ */
 
 const ownerEmail = () => (OWNER_EMAIL || '').trim().toLowerCase();
