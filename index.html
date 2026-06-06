@@ -690,6 +690,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     </div>
     <div class="done-bar" id="doneBar" style="display:none;">
       <button class="btn btn-orange" onclick="finishDocument()">&#10003; Done - Close &amp; New</button>
+      <button class="btn btn-ghost btn-sm" onclick="discardDocument()" style="color:var(--red);border-color:rgba(255,60,90,0.4);">&#10005; Discard</button>
       <span style="font-size:0.72rem;color:var(--text3);">Saves and resets for next course</span>
     </div>
   </div>
@@ -699,6 +700,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
 <div id="page-files" class="page">
   <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
     <div class="files-top">
+      <button class="btn btn-ghost btn-sm" id="backBtn" onclick="navigateBack()" style="display:none;padding:5px 10px;font-size:1.05rem;line-height:1;" title="Go back">&#8592;</button>
       <div class="path-crumb" id="pathCrumb"><span class="crumb" onclick="navToRoot()">&#128193; My Files</span></div>
       <div class="btn-group">
         <button class="btn active" id="sortNameBtn" onclick="sortFiles('name')">Name</button>
@@ -1526,6 +1528,28 @@ function _doFinish() {
   toast('Saved. Ready for next course.', 'success');
 }
 
+function discardDocument() {
+  if (!rows.length) { toast('No active document to close', 'warn'); return; }
+  showModal('Discard Document?',
+    'Close the current document without saving?\nAll unsaved changes will be lost.',
+    null,
+    [
+      { label: 'Discard', cls: 'btn-danger', cb: function() {
+        closeModal();
+        rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
+        ['courseCode','courseTitle','examPrefix','numScripts'].forEach(function(id) {
+          var el = document.getElementById(id); if (el) el.value = '';
+        });
+        renderTable(); updateStats();
+        document.getElementById('doneBar').style.display = 'none';
+        document.getElementById('previewBox').textContent = '---';
+        toast('Document discarded', 'warn');
+      }},
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]
+  );
+}
+
 // ─── AUTOCOMPLETE ─────────────────────────────────
 var acIdx = -1;
 function onCourseCodeInput(val) {
@@ -1990,6 +2014,8 @@ function getAncestors(targetId) {
 }
 
 function renderFilesPage() {
+  var backBtn = document.getElementById('backBtn');
+  if (backBtn) backBtn.style.display = (viewingBin || (filesTab === 'myfiles' && curFolderId !== 'root') || (filesTab === 'unified' && currentUnifiedFolderId !== null)) ? '' : 'none';
   if (viewingBin) { updateSelActionBar(); renderBinPage(); return; }
   if (filesTab === 'unified') { renderUnifiedFoldersPage(); return; }
   var folder = findNode(fsRoot, curFolderId);
@@ -2023,8 +2049,10 @@ function renderFilesPage() {
     var hasUnified = unifiedFolders.length > 0;
     return '<div class="file-card ' + (sel ? 'selected' : '') + '" id="fc-' + item.id + '"' +
       ' onclick="fcClick(event,\'' + item.id + '\')"' +
-      ' ondblclick="fcDbl(\'' + item.id + '\')"' +
-      ' oncontextmenu="showCtx(event,\'' + item.id + '\')">' +
+      ' oncontextmenu="showCtx(event,\'' + item.id + '\')"' +
+      ' ontouchstart="fcTouchStart(event,\'' + item.id + '\')"' +
+      ' ontouchend="fcTouchEnd(event)"' +
+      ' ontouchmove="fcTouchMove()">' +
       '<div class="file-check" onclick="toggleFileSelect(event,\'' + item.id + '\')">' + (sel ? '&#10003;' : '') + '</div>' +
       '<div class="file-icon">' + icon + '</div>' +
       '<div class="file-name">' + escH(item.name) + '</div>' +
@@ -2035,10 +2063,11 @@ function renderFilesPage() {
 }
 
 function fcClick(e, id) {
-  // Always toggle — clicking adds/removes without clearing other selections.
-  // Use double-click (fcDbl) to open files or navigate into folders.
-  if (selectedFiles.has(id)) selectedFiles.delete(id); else selectedFiles.add(id);
-  renderFilesPage();
+  if (_longPressTriggered) { _longPressTriggered = false; return; }
+  var node = findNode(fsRoot, id);
+  if (!node) return;
+  if (node.type === 'folder') navTo(node.id);
+  else openFileForEdit(node);
 }
 
 function toggleFileSelect(e, id) {
@@ -2103,6 +2132,20 @@ function openFileForEdit(node) {
 
 function navTo(id) { curFolderId = id; selectedFiles.clear(); renderFilesPage(); }
 function navToRoot() { navTo('root'); }
+
+function navigateBack() {
+  if (viewingBin) { hideBin(); return; }
+  if (filesTab === 'unified') {
+    currentUnifiedFolderId = null;
+    selectedFiles.clear();
+    renderFilesPage();
+    return;
+  }
+  if (curFolderId === 'root') return;
+  var path = getAncestors(curFolderId);
+  var parent = path.length >= 2 ? path[path.length - 2] : null;
+  navTo(parent ? parent.id : 'root');
+}
 
 function sortFiles(mode) {
   sortMode = mode;
@@ -2618,8 +2661,10 @@ function renderUnifiedFoldersList() {
     var ts = uf.created ? new Date(uf.created).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) : '';
     return '<div class="file-card unified-folder ' + (sel ? 'selected' : '') + '" id="fc-uf-' + uf.id + '"' +
       ' onclick="fcClickUnified(event,\'' + uf.id + '\')"' +
-      ' ondblclick="openUnifiedFolder(\'' + uf.id + '\')"' +
-      ' oncontextmenu="showUnifiedCtx(event,\'' + uf.id + '\')">' +
+      ' oncontextmenu="showUnifiedCtx(event,\'' + uf.id + '\')"' +
+      ' ontouchstart="ufTouchStart(event,\'' + uf.id + '\')"' +
+      ' ontouchend="fcTouchEnd(event)"' +
+      ' ontouchmove="fcTouchMove()">' +
       '<div class="file-check" onclick="toggleUnifiedSelect(event,\'' + uf.id + '\')">' + (sel ? '&#10003;' : '') + '</div>' +
       '<div class="file-icon">&#127760;' + (hasPass ? ' <span class="unified-lock">&#128272;</span>' : '') + '</div>' +
       '<div class="file-name">' + escH(uf.name) + (isCreator ? '<span class="unified-badge">creator</span>' : '') + '</div>' +
@@ -2629,8 +2674,8 @@ function renderUnifiedFoldersList() {
 }
 
 function fcClickUnified(e, id) {
-  if (selectedFiles.has(id)) selectedFiles.delete(id); else selectedFiles.add(id);
-  renderUnifiedFoldersList();
+  if (_longPressTriggered) { _longPressTriggered = false; return; }
+  openUnifiedFolder(id);
 }
 
 function toggleUnifiedSelect(e, id) {
@@ -2657,7 +2702,7 @@ async function renderUnifiedFolderContent(folderId) {
       var ts = file.created ? new Date(file.created).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) : '';
       var size = file.content ? (file.content.length >= 1024 ? (file.content.length / 1024).toFixed(1) + ' KB' : file.content.length + ' B') : '';
       return '<div class="file-card" id="fc-' + file.id + '"' +
-        ' ondblclick="openUnifiedFileForEdit(\'' + folderId + '\',\'' + file.id + '\')">' +
+        ' onclick="openUnifiedFileForEdit(\'' + folderId + '\',\'' + file.id + '\')">' +
         '<div class="file-icon">&#128196;</div>' +
         '<div class="file-name">' + escH(file.name) + '</div>' +
         '<div class="file-meta">' + escH(file.uploaderEmail || '') + (ts ? ' &bull; ' + ts : '') + (size ? ' &bull; ' + size : '') + '</div>' +
@@ -2952,6 +2997,50 @@ function closeUnifiedCtx() {
   var m = document.getElementById('unifiedCtxMenu');
   if (m) { m.classList.remove('open'); m.style.display = ''; }
 }
+
+// ── Long-press (mobile context menu) ─────────────────────────────────────
+var _longPressTimer = null;
+var _longPressTriggered = false;
+var _touchMoved = false;
+
+function fcTouchStart(e, id) {
+  _touchMoved = false;
+  _longPressTriggered = false;
+  var touch = e.touches[0];
+  var cx = touch ? touch.clientX : 0, cy = touch ? touch.clientY : 0;
+  _longPressTimer = setTimeout(function() {
+    if (!_touchMoved) {
+      _longPressTriggered = true;
+      showCtx({ preventDefault: function(){}, clientX: cx, clientY: cy }, id);
+    }
+  }, 500);
+}
+
+function ufTouchStart(e, id) {
+  _touchMoved = false;
+  _longPressTriggered = false;
+  var touch = e.touches[0];
+  var cx = touch ? touch.clientX : 0, cy = touch ? touch.clientY : 0;
+  _longPressTimer = setTimeout(function() {
+    if (!_touchMoved) {
+      _longPressTriggered = true;
+      showUnifiedCtx({ preventDefault: function(){}, clientX: cx, clientY: cy }, id);
+    }
+  }, 500);
+}
+
+function fcTouchEnd(e) {
+  clearTimeout(_longPressTimer);
+  _longPressTimer = null;
+  if (_longPressTriggered) { e.preventDefault(); }
+}
+
+function fcTouchMove() {
+  _touchMoved = true;
+  clearTimeout(_longPressTimer);
+  _longPressTimer = null;
+}
+
 function uctxOpen() { closeUnifiedCtx(); openUnifiedFolder(unifiedCtxTargetId); }
 function uctxDownload() { closeUnifiedCtx(); downloadUnifiedFolder(unifiedCtxTargetId); }
 function uctxReport() { closeUnifiedCtx(); showUnifiedFolderReport(unifiedCtxTargetId); }
