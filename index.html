@@ -350,6 +350,27 @@ td:nth-child(3){width:95px;}
 .file-card.file-folder.selected{border-color:var(--accent);background:var(--accent-dim);box-shadow:0 0 12px rgba(0,212,255,0.12);}
 .file-card.file-folder .file-name{color:var(--accent);}
 
+/* ─── BACK BUTTON ─── */
+#backBtn{background:linear-gradient(135deg,var(--accent2),var(--accent))!important;color:#030810!important;border:none!important;font-weight:700!important;box-shadow:0 0 10px rgba(0,212,255,0.25);}
+#backBtn:hover{filter:brightness(1.15);box-shadow:0 0 16px rgba(0,212,255,0.4)!important;}
+
+/* ─── UNIFIED FOLDER COLORS ─── */
+.uf-color-blue{border-color:rgba(0,212,255,0.45)!important;background:rgba(0,212,255,0.07)!important;}
+.uf-color-blue:hover{border-color:rgba(0,212,255,0.75)!important;background:rgba(0,212,255,0.13)!important;}
+.uf-color-green{border-color:rgba(57,255,126,0.45)!important;background:rgba(57,255,126,0.07)!important;}
+.uf-color-green:hover{border-color:rgba(57,255,126,0.75)!important;background:rgba(57,255,126,0.13)!important;}
+.uf-color-purple{border-color:rgba(123,97,255,0.45)!important;background:rgba(123,97,255,0.07)!important;}
+.uf-color-purple:hover{border-color:rgba(123,97,255,0.75)!important;background:rgba(123,97,255,0.13)!important;}
+.uf-color-gold{border-color:rgba(240,192,64,0.45)!important;background:rgba(240,192,64,0.07)!important;}
+.uf-color-gold:hover{border-color:rgba(240,192,64,0.75)!important;background:rgba(240,192,64,0.13)!important;}
+.uf-color-red{border-color:rgba(255,60,90,0.45)!important;background:rgba(255,60,90,0.07)!important;}
+.uf-color-red:hover{border-color:rgba(255,60,90,0.75)!important;background:rgba(255,60,90,0.13)!important;}
+.uf-color-orange{border-color:rgba(255,149,0,0.45)!important;background:rgba(255,149,0,0.07)!important;}
+.uf-color-orange:hover{border-color:rgba(255,149,0,0.75)!important;background:rgba(255,149,0,0.13)!important;}
+
+/* ─── UNIFIED FILE LOCK ─── */
+.uf-lock-badge{display:inline-flex;align-items:center;font-size:10px;color:var(--orange);opacity:0.9;flex-shrink:0;}
+
 /* COLORFUL IMPORT BUTTON */
 .btn-import{background:linear-gradient(135deg,#7b61ff 0%,#00d4ff 50%,#39ff7e 100%);color:#030810;border:none;font-weight:700;}
 .btn-import:hover{filter:brightness(1.12);box-shadow:0 0 18px rgba(0,212,255,0.4);}
@@ -890,6 +911,14 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
   <div class="ctx-item danger" id="uctxDelete" onclick="uctxDelete()" style="display:none;">&#128465; Delete Folder</div>
 </div>
 
+<div class="ctx-menu" id="ufFileCtxMenu">
+  <div class="ctx-item" onclick="ufFileCtxOpen()">&#128196; Open / Edit</div>
+  <div class="ctx-item" id="ufFileCtxRename" onclick="ufFileCtxRename()">&#9999;&#65039; Rename</div>
+  <div class="ctx-item" id="ufFileCtxLock" onclick="ufFileCtxToggleLock()">&#128274; Lock / Unlock</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ufFileCtxDelete" onclick="ufFileCtxDelete()">&#128465; Delete</div>
+</div>
+
 <div id="toasts"></div>
 
 <!-- WELCOME OVERLAY -->
@@ -993,10 +1022,11 @@ window.addEventListener('load', function() {
   document.addEventListener('click', function(e) {
     if (!e.target.closest('#ctxMenu')) closeCtx();
     if (!e.target.closest('#unifiedCtxMenu')) closeUnifiedCtx();
+    if (!e.target.closest('#ufFileCtxMenu')) closeUFFileCtx();
     if (!e.target.closest('#acList') && !e.target.closest('#courseCode')) hideSuggestions();
   });
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeModal(); closeCtx(); }
+    if (e.key === 'Escape') { closeModal(); closeCtx(); closeUnifiedCtx(); closeUFFileCtx(); }
   });
   // Fallback: if the Firebase engine never initialises (offline / blocked), tell the user.
   setTimeout(function() {
@@ -1700,31 +1730,40 @@ function _tryStartEngine() {
 }
 
 function _handleResult(e) {
-  if (!isListening) return;   // mic is "paused" - discard everything
+  if (!isListening) return;
 
   var interim = '';
-  var hasFinal = false;
 
   for (var i = e.resultIndex; i < e.results.length; i++) {
     if (e.results[i].isFinal) {
-      // Skip already-processed results (index-based dedup avoids blocking identical digits
-      // spoken for different rows, which the old text-comparison dedup broke).
       if (i <= lastProcessedResultIndex) continue;
       lastProcessedResultIndex = i;
-      hasFinal = true;
 
       var finalTxt = e.results[i][0].transcript.trim();
       if (!finalTxt) continue;
 
-      var targetRowId = activeRowId;          // snapshot row at this exact moment
+      // If a previous silence timer is pending (user spoke again before delay
+      // elapsed), cancel it and immediately advance the row so this new final
+      // lands on a fresh row.
+      if (silenceTimerHandle) {
+        clearTimeout(silenceTimerHandle);
+        silenceTimerHandle = null;
+        if (settings.autoAdvance) advanceRow(activeRowId, 1);
+      }
+
+      var targetRowId = activeRowId;
       processVoiceInput(finalTxt, targetRowId);
 
-      // Advance immediately so the NEXT final goes to the next row, not this one.
-      // Waiting for the silence timer caused rapid speech to pile up on the same row.
-      clearTimeout(silenceTimerHandle);
-      silenceTimerHandle = null;
+      // Start the silence-delay timer — row advances after appliedSilenceMs of
+      // silence. This is exactly what the slider controls.
       if (settings.autoAdvance) {
-        advanceRow(targetRowId, 1);
+        (function(snapId) {
+          silenceTimerHandle = setTimeout(function() {
+            silenceTimerHandle = null;
+            if (!isListening) return;
+            if (activeRowId === snapId) advanceRow(snapId, 1);
+          }, appliedSilenceMs || 1000);
+        })(targetRowId);
       }
 
       var vt = document.getElementById('vTranscript');
@@ -1734,15 +1773,9 @@ function _handleResult(e) {
     }
   }
 
-  if (!hasFinal) {
+  if (interim) {
     var vt2 = document.getElementById('vTranscript');
     if (vt2) vt2.textContent = interim.trim();
-    // Do NOT start the silence timer from interim results.
-    // The timer was firing before the final arrived, advancing the row early so
-    // the final then wrote to the wrong (already-advanced) row — causing the
-    // double-skip visible in the screenshot. Row advance now happens only on
-    // final via advanceRow(), which is sufficient: recognition itself only
-    // produces a final after the user stops speaking (its own silence detection).
   }
 }
 
@@ -2253,40 +2286,68 @@ function moveSelected() {
   if (!sel.length) { toast('Select files first', 'warn'); return; }
   var selSet = new Set(sel);
 
-  // Build list of valid destinations: exclude current folder and any selected folder
-  // (prevents moving a folder into itself or one of its selected siblings)
-  var folders = [];
+  // Collect My Files folders, sorted by most recently modified
+  var myFolders = [];
   function collectF(node, depth) {
     if (node.type === 'folder' && node.id !== curFolderId && !selSet.has(node.id))
-      folders.push({ id: node.id, name: '  '.repeat(depth) + (depth === 0 ? 'My Files (root)' : node.name) });
+      myFolders.push({ id: node.id, label: depth === 0 ? 'My Files (root)' : node.name, modified: node.modified || node.created || 0 });
     if (node.children) node.children.filter(function(c) { return c.type === 'folder'; }).forEach(function(c) { collectF(c, depth + 1); });
   }
   collectF(fsRoot, 0);
-  if (!folders.length) { toast('No destination folders available', 'warn'); return; }
+  myFolders.sort(function(a, b) { return b.modified - a.modified; });
 
-  var opts = folders.map(function(f) { return '<option value="' + f.id + '">' + escH(f.name) + '</option>'; }).join('');
-  showModal('Move ' + sel.length + ' item(s) To', 'Select destination folder:', { type: 'select', options: opts }, [
+  if (!myFolders.length) { toast('No destination folders available', 'warn'); return; }
+
+  window._moveDest = myFolders[0] ? myFolders[0].id : null;
+
+  var listHtml =
+    '<div style="margin-top:8px;">' +
+    '<input id="moveFolderSearch" class="finput" placeholder="&#128269; Search folders\u2026" oninput="window._filterMoveItems()" style="margin-bottom:8px;">' +
+    '<div id="moveFolderList" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;">' +
+    myFolders.map(function(f) {
+      return '<div class="move-folder-item" data-id="' + f.id + '" data-label="' + escH(f.label) + '" onclick="window._selectMoveItem(this)" style="padding:9px 12px;border-radius:8px;cursor:pointer;font-size:0.8rem;color:var(--text2);border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:8px;transition:all .15s;">&#128193; ' + escH(f.label) + '</div>';
+    }).join('') +
+    '</div></div>';
+
+  showRawModal('Move ' + sel.length + ' item(s) To', 'Select destination folder:', listHtml, [
     { label: 'Move', cls: 'btn-primary', cb: function() {
-      var destId = document.getElementById('modalSelectInput').value;
-      // Capture all node refs BEFORE any tree mutations
+      var destId = window._moveDest;
+      if (!destId) { toast('Select a folder first', 'warn'); return; }
       var nodesToMove = sel.map(function(id) { return findNode(fsRoot, id); }).filter(Boolean);
       if (!nodesToMove.length) { closeModal(); return; }
-      // Remove all from tree first
       nodesToMove.forEach(function(node) { removeFromParent(fsRoot, node.id); });
-      // Re-find destination (safe: dest was not in selSet, so it still exists in tree)
       var dest = findNode(fsRoot, destId);
-      if (!dest) { toast('Destination folder no longer exists', 'error'); closeModal(); return; }
+      if (!dest) { toast('Destination folder not found', 'error'); closeModal(); return; }
       if (!Array.isArray(dest.children)) dest.children = [];
-      // Add all to destination
       nodesToMove.forEach(function(node) { dest.children.push(node); });
+      dest.modified = new Date().getTime();
       selectedFiles.clear();
       saveToStorage(); renderFilesPage(); closeModal();
-      toast('Moved ' + nodesToMove.length + ' item(s) to “' + dest.name + '”', 'success');
+      toast('Moved ' + nodesToMove.length + ' item(s) to "' + (dest.id === 'root' ? 'My Files' : dest.name) + '"\u2019', 'success');
     }},
     { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
   ]);
+
+  setTimeout(function() {
+    var items = document.querySelectorAll('.move-folder-item');
+    if (items.length) { items[0].style.borderColor = 'var(--accent)'; items[0].style.color = 'var(--text)'; }
+  }, 60);
 }
 
+window._selectMoveItem = function(el) {
+  document.querySelectorAll('.move-folder-item').forEach(function(x) {
+    x.style.borderColor = 'var(--border)'; x.style.color = 'var(--text2)';
+  });
+  el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--text)';
+  window._moveDest = el.dataset.id;
+};
+
+window._filterMoveItems = function() {
+  var q = (document.getElementById('moveFolderSearch').value || '').toLowerCase();
+  document.querySelectorAll('.move-folder-item').forEach(function(x) {
+    x.style.display = (!q || (x.dataset.label || '').toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+  });
+};
 function removeFromParent(root, id) {
   if (root.children) {
     var i = root.children.findIndex(function(c) { return c.id === id; });
@@ -2453,7 +2514,56 @@ function renderBinPage() {
         '<button class="btn btn-danger btn-sm" onclick="emptyBin()">&#128465; Empty Bin</button>' +
       '</div>' +
       rows_html +
+      '<div style="margin-top:14px;padding-top:10px;border-top:1px dashed var(--border2);">' +
+        '<div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">UNIFIED FOLDER BIN</div>' +
+        '<div id="ufBinRows" style="display:flex;flex-direction:column;gap:4px;"><div style="font-size:0.75rem;color:var(--text3);">Loading…</div></div>' +
+      '</div>' +
     '</div>';
+
+  // Async load unified folder bin items (visible to uploader + folder creator only)
+  if (currentUser && window.FB && window.FB.listDeletedSharedFolderFiles) {
+    window.FB.listDeletedSharedFolderFiles(currentUser.uid).then(function(items) {
+      var el = document.getElementById('ufBinRows');
+      if (!el) return;
+      if (!items || !items.length) { el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);">No deleted unified folder files.</div>'; return; }
+      el.innerHTML = items.map(function(b) {
+        var ts = b.deletedAt ? new Date(b.deletedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + new Date(b.deletedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—';
+        return '<div class="bin-row">' +
+          '<div style="font-size:20px;flex-shrink:0;">&#128196;</div>' +
+          '<div class="bin-row-main">' +
+            '<div class="bin-row-name">' + escH(b.name) + '</div>' +
+            '<div class="bin-row-sub">From: ' + escH(b.folderName) + ' &bull; Deleted ' + ts + '</div>' +
+          '</div>' +
+          '<div class="bin-actions">' +
+            '<button class="btn btn-ghost btn-sm" onclick="restoreUFBinItem(\'' + b.folderId + '\',\'' + b.id + '\')">&#8617; Restore</button>' +
+            '<button class="btn btn-danger btn-sm" onclick="permDeleteUFBinItem(\'' + b.folderId + '\',\'' + b.id + '\')">&#128465;</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }).catch(function() { var el = document.getElementById('ufBinRows'); if (el) el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);">Could not load unified folder bin.</div>'; });
+  }
+}
+
+async function restoreUFBinItem(folderId, binItemId) {
+  try {
+    await window.FB.restoreSharedFolderFile(folderId, binItemId);
+    delete unifiedFolderFilesCache[folderId];
+    renderFilesPage(); updateBinCount();
+    toast('File restored to unified folder', 'success');
+  } catch (e) { toast('Restore failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
+}
+
+function permDeleteUFBinItem(folderId, binItemId) {
+  showModal('Permanently Delete?', 'This file will be deleted forever and cannot be recovered.', null, [
+    { label: 'Delete Forever', cls: 'btn-danger', cb: async function() {
+      try {
+        await window.FB.permanentDeleteSharedFolderFile(folderId, binItemId);
+        closeModal(); renderFilesPage();
+        toast('Permanently deleted', 'success');
+      } catch (e) { toast('Failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
 }
 
 // ─── CONTEXT MENU ─────────────────────────────────
@@ -2679,6 +2789,18 @@ function renderUnifiedFoldersPage() {
   }
 }
 
+function _pickUFColor(el) {
+  if (!el) return;
+  document.querySelectorAll('[data-ufcolor]').forEach(function(x) { x.style.borderColor = 'transparent'; x.style.boxShadow = ''; });
+  el.style.borderColor = '#fff'; el.style.boxShadow = '0 0 0 3px rgba(255,255,255,0.3)';
+  window._ufPickedColor = el.dataset.ufcolor;
+}
+
+function _ufColorClass(color) {
+  var map = { blue:'uf-color-blue', green:'uf-color-green', purple:'uf-color-purple', gold:'uf-color-gold', red:'uf-color-red', orange:'uf-color-orange' };
+  return map[color] || 'uf-color-gold';
+}
+
 function renderUnifiedFoldersList() {
   var grid = document.getElementById('filesGrid');
   if (!grid) return;
@@ -2693,7 +2815,8 @@ function renderUnifiedFoldersList() {
     var hasPass = !!uf.passwordHash;
     var isCreator = currentUser && currentUser.uid === uf.creatorUid;
     var ts = uf.created ? new Date(uf.created).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) : '';
-    return '<div class="file-card unified-folder ' + (sel ? 'selected' : '') + '" id="fc-uf-' + uf.id + '"' +
+    var colorCls = _ufColorClass(uf.color);
+    return '<div class="file-card unified-folder ' + colorCls + (sel ? ' selected' : '') + '" id="fc-uf-' + uf.id + '"' +
       ' onclick="fcClickUnified(event,\'' + uf.id + '\')"' +
       ' oncontextmenu="showUnifiedCtx(event,\'' + uf.id + '\')"' +
       ' ontouchstart="ufTouchStart(event,\'' + uf.id + '\')"' +
@@ -2735,10 +2858,18 @@ async function renderUnifiedFolderContent(folderId) {
     grid.innerHTML = files.map(function(file) {
       var ts = file.created ? new Date(file.created).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) : '';
       var size = file.content ? (file.content.length >= 1024 ? (file.content.length / 1024).toFixed(1) + ' KB' : file.content.length + ' B') : '';
-      return '<div class="file-card" id="fc-' + file.id + '"' +
-        ' onclick="openUnifiedFileForEdit(\'' + folderId + '\',\'' + file.id + '\')">' +
+      var isUploader = currentUser && file.uploaderUid === currentUser.uid;
+      var locked = file.locked !== false;
+      var lockIcon = isUploader
+        ? ' <span class="uf-lock-badge" style="color:var(--green);" title="' + (locked ? 'Your file — locked (others cannot edit). Right-click to unlock.' : 'Your file — unlocked (others can edit). Right-click to lock.') + '">' + (locked ? '&#128275;' : '&#128274;') + '</span>'
+        : (locked ? ' <span class="uf-lock-badge" title="Locked by uploader — read only">&#128274;</span>' : '');
+      return '<div class="file-card file-doc" id="fc-uf-' + file.id + '"' +
+        ' onclick="openUnifiedFileForEdit(\'' + folderId + '\',\'' + file.id + '\')"' +
+        ' oncontextmenu="showUFFileCtx(event,\'' + folderId + '\',\'' + file.id + '\')"' +
+        ' ontouchstart="ufFileTouchStart(event,\'' + folderId + '\',\'' + file.id + '\')"' +
+        ' ontouchend="fcTouchEnd(event)" ontouchmove="fcTouchMove()">' +
         '<div class="file-icon">&#128196;</div>' +
-        '<div class="file-name">' + escH(file.name) + '</div>' +
+        '<div class="file-name">' + escH(file.name) + lockIcon + '</div>' +
         '<div class="file-meta">' + escH(file.uploaderEmail || '') + (ts ? ' &bull; ' + ts : '') + (size ? ' &bull; ' + size : '') + '</div>' +
         '</div>';
     }).join('');
@@ -2759,7 +2890,25 @@ function openUnifiedFileForEdit(folderId, fileId) {
   var files = unifiedFolderFilesCache[folderId] || [];
   var file = files.find(function(f) { return f.id === fileId; });
   if (!file) return;
-  openFileForEdit(Object.assign({ type: 'file' }, file));
+  var ts = file.created || 0;
+  var dateStr = ts ? new Date(ts).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + new Date(ts).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '—';
+  var size = file.content ? (file.content.length >= 1024 ? (file.content.length/1024).toFixed(1)+' KB' : file.content.length+' B') : '0 B';
+  var lines = (file.content||'').split('\n').filter(Boolean).length;
+  var infoHtml =
+    '<div style="background:var(--surface3);border:1px solid rgba(57,255,126,0.3);border-radius:8px;padding:12px 14px;margin-top:8px;display:flex;flex-direction:column;gap:6px;">' +
+      '<div style="font-size:0.82rem;font-weight:700;color:var(--green);word-break:break-word;">&#128196; ' + escH(file.name) + '</div>' +
+      '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:0.74rem;">' +
+        '<span style="color:var(--text3);">By</span><span style="color:var(--text);font-family:var(--mono);">' + escH(file.uploaderName||file.uploaderEmail||'unknown') + '</span>' +
+        '<span style="color:var(--text3);">Entries</span><span style="color:var(--text);font-family:var(--mono);">' + lines + '</span>' +
+        '<span style="color:var(--text3);">Size</span><span style="color:var(--text);font-family:var(--mono);">' + size + '</span>' +
+        '<span style="color:var(--text3);">Added</span><span style="color:var(--text);font-family:var(--mono);">' + dateStr + '</span>' +
+      '</div>' +
+    '</div>';
+  var capturedFile = file;
+  showRawModal('Open Document?', 'Open this document in the Builder?', infoHtml, [
+    { label: '&#9654; Open', cls: 'btn-success', cb: function() { closeModal(); openFileForEdit(Object.assign({ type: 'file' }, capturedFile)); } },
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
 }
 
 async function openUnifiedFolder(id) {
@@ -2779,7 +2928,7 @@ async function openUnifiedFolder(id) {
       }},
       { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
     ]);
-    setTimeout(function() { var i = document.getElementById('modalTextInput'); if (i) i.type = 'password'; }, 50);
+    setTimeout(makeModalPassword, 50);
     return;
   }
   currentUnifiedFolderId = id;
@@ -2794,33 +2943,49 @@ function createUnifiedFolder() {
       var name = (document.getElementById('modalTextInput').value || '').trim();
       if (!name) return;
       closeModal();
-      showModal('Set Password (optional)', 'Leave blank for no password, or set a password to restrict access:', { type: 'text', placeholder: 'Password (leave blank for none)' }, [
+      window._ufPickedColor = 'gold';
+      var colorHtml =
+        '<div style="margin-top:8px;">' +
+          '<div style="font-size:0.72rem;color:var(--text3);margin-bottom:7px;">Choose folder color:</div>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">' +
+            [['gold','#f0c040'],['blue','#00d4ff'],['green','#39ff7e'],['purple','#7b61ff'],['red','#ff3c5a'],['orange','#ff9500']].map(function(c) {
+              return '<div data-ufcolor="'+c[0]+'" onclick="_pickUFColor(this)" style="width:30px;height:30px;border-radius:50%;background:'+c[1]+';cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0;" title="'+c[0]+'"></div>';
+            }).join('') +
+          '</div>' +
+          '<div style="font-size:0.72rem;color:var(--text3);margin-bottom:5px;">Password (optional — leave blank for open access):</div>' +
+          '<input id="modalTextInput" class="finput" placeholder="Password" autocomplete="new-password">' +
+        '</div>';
+      showRawModal('Folder Color &amp; Password', 'Customize "' + escH(name) + '":', colorHtml, [
         { label: 'Create Folder', cls: 'btn-primary', cb: async function() {
           var inp = document.getElementById('modalTextInput');
           var pass = inp ? inp.value.trim() : '';
+          var color = window._ufPickedColor || 'gold';
           closeModal();
           if (!window.FB || !window.FB.createSharedFolder) { toast('Not connected to server', 'error'); return; }
           try {
-            var tempHash = pass ? hashFolderPassword(pass, 'temp_' + Date.now()) : null;
+            var tempHash = pass ? hashFolderPassword(pass, 'temp_' + new Date().getTime()) : null;
             var newId = await window.FB.createSharedFolder({
-              name: name, passwordHash: tempHash,
+              name: name, passwordHash: tempHash, color: color,
               creatorUid: currentUser.uid, creatorEmail: currentUser.email,
               creatorName: (currentProfile && currentProfile.displayName) || currentUser.email
             });
-            // Re-hash with real ID as salt for better security
             if (pass) {
               var realHash = hashFolderPassword(pass, newId);
               await window.FB.updateSharedFolder(newId, { passwordHash: realHash });
             }
             await loadUnifiedFolders();
             toast('Unified folder "' + name + '" created', 'success');
-            logAct('create_unified_folder', 'Created unified folder "' + name + '"');
+            logAct('create_unified_folder', 'Created unified folder "' + name + '" (' + color + ')');
             renderFilesPage();
           } catch (e) { toast('Failed to create: ' + (e && e.message ? e.message : 'error'), 'error'); }
         }},
         { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
       ]);
-      setTimeout(function() { var i = document.getElementById('modalTextInput'); if (i) i.type = 'password'; }, 50);
+      setTimeout(function() {
+        var inp = document.getElementById('modalTextInput');
+        if (inp) { inp.type = 'password'; inp.autocomplete = 'new-password'; }
+        _pickUFColor(document.querySelector('[data-ufcolor="gold"]'));
+      }, 60);
     }},
     { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
   ]);
@@ -2829,16 +2994,30 @@ function createUnifiedFolder() {
 async function moveToUnifiedFolderDialog() {
   var sel = Array.from(selectedFiles);
   if (!sel.length) { toast('Select files first', 'warn'); return; }
-  // Only allow moving files (not folders) to unified folders
   var fileSel = sel.filter(function(id) { var n = findNode(fsRoot, id); return n && n.type === 'file'; });
   if (!fileSel.length) { toast('Only files (not folders) can be moved to unified folders', 'warn'); return; }
   if (!unifiedFolders.length) { toast('No unified folders available. Create one first.', 'warn'); return; }
-  var opts = unifiedFolders.map(function(uf) {
-    return '<option value="' + uf.id + '">' + escH(uf.name) + (uf.passwordHash ? ' 🔒' : '') + '</option>';
-  }).join('');
-  showModal('Move to Unified Folder', 'Select a unified folder (' + fileSel.length + ' file(s)):', { type: 'select', options: opts }, [
+
+  var colorBorders = { blue:'rgba(0,212,255,0.55)', green:'rgba(57,255,126,0.55)', purple:'rgba(123,97,255,0.55)', gold:'rgba(240,192,64,0.55)', red:'rgba(255,60,90,0.55)', orange:'rgba(255,149,0,0.55)' };
+  var colorBgs = { blue:'rgba(0,212,255,0.07)', green:'rgba(57,255,126,0.07)', purple:'rgba(123,97,255,0.07)', gold:'rgba(240,192,64,0.07)', red:'rgba(255,60,90,0.07)', orange:'rgba(255,149,0,0.07)' };
+
+  window._moveUFDest = unifiedFolders[0] ? unifiedFolders[0].id : null;
+
+  var listHtml =
+    '<div style="margin-top:8px;">' +
+    '<input id="moveUFSearch" class="finput" placeholder="&#128269; Search unified folders…" oninput="window._filterUFItems()" style="margin-bottom:8px;">' +
+    '<div id="moveUFList" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;">' +
+    unifiedFolders.map(function(uf) {
+      var border = colorBorders[uf.color] || colorBorders.gold;
+      var bg = colorBgs[uf.color] || colorBgs.gold;
+      return '<div class="move-uf-item" data-id="' + uf.id + '" data-label="' + escH(uf.name) + '" onclick="window._selectUFItem(this)" style="padding:9px 12px;border-radius:8px;cursor:pointer;font-size:0.8rem;color:var(--text2);border:1px solid ' + border + ';background:' + bg + ';display:flex;align-items:center;gap:8px;transition:all .15s;">&#127760; ' + escH(uf.name) + (uf.passwordHash ? ' &#128272;' : '') + '</div>';
+    }).join('') +
+    '</div></div>';
+
+  showRawModal('Move to Unified Folder', fileSel.length + ' file(s) — select destination:', listHtml, [
     { label: 'Next', cls: 'btn-primary', cb: async function() {
-      var destId = document.getElementById('modalSelectInput').value;
+      var destId = window._moveUFDest;
+      if (!destId) { toast('Select a folder first', 'warn'); return; }
       var uf = unifiedFolders.find(function(f) { return f.id === destId; });
       if (!uf) return;
       closeModal();
@@ -2853,14 +3032,32 @@ async function moveToUnifiedFolderDialog() {
           }},
           { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
         ]);
-        setTimeout(function() { var i = document.getElementById('modalTextInput'); if (i) i.type = 'password'; }, 50);
+        setTimeout(makeModalPassword, 50);
       } else {
         _doMoveToUnified(fileSel, destId, uf);
       }
     }},
     { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
   ]);
+
+  setTimeout(function() {
+    var items = document.querySelectorAll('.move-uf-item');
+    if (items.length) { items[0].style.color = 'var(--text)'; items[0].style.fontWeight = '600'; }
+  }, 60);
 }
+
+window._selectUFItem = function(el) {
+  document.querySelectorAll('.move-uf-item').forEach(function(x) { x.style.color = 'var(--text2)'; x.style.fontWeight = ''; });
+  el.style.color = 'var(--text)'; el.style.fontWeight = '600';
+  window._moveUFDest = el.dataset.id;
+};
+
+window._filterUFItems = function() {
+  var q = (document.getElementById('moveUFSearch').value || '').toLowerCase();
+  document.querySelectorAll('.move-uf-item').forEach(function(x) {
+    x.style.display = (!q || (x.dataset.label || '').toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+  });
+};
 
 async function _doMoveToUnified(sel, folderId, uf) {
   if (!window.FB || !window.FB.addFileToSharedFolder) { toast('Not connected to server', 'error'); return; }
@@ -2929,7 +3126,22 @@ async function showUnifiedFolderReport(folderId) {
       '</div></div>';
   });
   html += '</div>';
+  var csvRows = files.map(function(f) {
+    var ts = f.created ? new Date(f.created).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + new Date(f.created).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+    return '"' + (f.name||'').replace(/"/g,'""') + '","' + (f.uploaderName||f.uploaderEmail||'unknown').replace(/"/g,'""') + '","' + ts + '"';
+  }).join('\n');
+  var ufName = uf.name;
   showRawModal('Contributor Report — ' + escH(uf.name), '', html, [
+    { label: '&#11015; Download CSV', cls: 'btn-success', cb: function() {
+      var csv = 'File,Contributor,Date\n' + csvRows;
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = (ufName||'report').replace(/\s+/g,'_') + '_report.csv';
+      document.body.appendChild(a); a.click();
+      setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+      toast('Report downloaded', 'success');
+    }},
     { label: 'Close', cls: 'btn-ghost', cb: closeModal }
   ]);
 }
@@ -2955,7 +3167,7 @@ async function changeUnifiedFolderPassword(folderId) {
     }},
     { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
   ]);
-  setTimeout(function() { var i = document.getElementById('modalTextInput'); if (i) i.type = 'password'; }, 50);
+  setTimeout(makeModalPassword, 50);
 }
 
 async function adminResetUnifiedFolderPassword(folderId) {
@@ -2980,7 +3192,7 @@ async function adminResetUnifiedFolderPassword(folderId) {
     }},
     { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
   ]);
-  setTimeout(function() { var i = document.getElementById('modalTextInput'); if (i) i.type = 'password'; }, 50);
+  setTimeout(makeModalPassword, 50);
 }
 
 async function deleteUnifiedFolder(folderId) {
@@ -3075,6 +3287,117 @@ function fcTouchMove() {
   _longPressTimer = null;
 }
 
+// ─── UNIFIED FOLDER FILE CONTEXT MENU ───────────────────────────────────
+var _ufFileCtxFolderId = null, _ufFileCtxFileId = null;
+
+function showUFFileCtx(e, folderId, fileId) {
+  e.preventDefault();
+  _ufFileCtxFolderId = folderId; _ufFileCtxFileId = fileId;
+  var files = unifiedFolderFilesCache[folderId] || [];
+  var file = files.find(function(f) { return f.id === fileId; });
+  var uf = unifiedFolders.find(function(f) { return f.id === folderId; });
+  var isUploader = currentUser && file && file.uploaderUid === currentUser.uid;
+  var isCreator = currentUser && uf && currentUser.uid === uf.creatorUid;
+  var locked = !file || file.locked !== false;
+  var canEdit = isUploader || !locked;
+  var canDelete = isUploader || isCreator || isAdminAccount;
+  var renameBtn = document.getElementById('ufFileCtxRename');
+  var lockBtn = document.getElementById('ufFileCtxLock');
+  var deleteBtn = document.getElementById('ufFileCtxDelete');
+  if (renameBtn) renameBtn.style.display = canEdit ? '' : 'none';
+  if (lockBtn) { lockBtn.style.display = isUploader ? '' : 'none'; lockBtn.textContent = locked ? '🔓 Unlock (allow others to edit)' : '🔒 Lock (only I can edit)'; }
+  if (deleteBtn) deleteBtn.style.display = canDelete ? '' : 'none';
+  var m = document.getElementById('ufFileCtxMenu'); if (!m) return;
+  closeCtx(); closeUnifiedCtx();
+  var x = e.clientX, y = e.clientY;
+  m.style.display = 'block';
+  var mw = m.offsetWidth || 200, mh = m.offsetHeight || 160;
+  if (x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
+  if (y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+  m.style.left = x + 'px'; m.style.top = y + 'px'; m.classList.add('open');
+}
+
+function closeUFFileCtx() {
+  var m = document.getElementById('ufFileCtxMenu');
+  if (m) { m.classList.remove('open'); m.style.display = ''; }
+}
+
+function ufFileTouchStart(e, folderId, fileId) {
+  _touchMoved = false; _longPressTriggered = false;
+  var touch = e.touches && e.touches[0];
+  var cx = touch ? touch.clientX : 0, cy = touch ? touch.clientY : 0;
+  _longPressTimer = setTimeout(function() {
+    if (!_touchMoved) { _longPressTriggered = true; showUFFileCtx({ preventDefault: function(){}, clientX: cx, clientY: cy }, folderId, fileId); }
+  }, 500);
+}
+
+function ufFileCtxOpen() { closeUFFileCtx(); openUnifiedFileForEdit(_ufFileCtxFolderId, _ufFileCtxFileId); }
+
+function ufFileCtxRename() {
+  closeUFFileCtx();
+  var files = unifiedFolderFilesCache[_ufFileCtxFolderId] || [];
+  var file = files.find(function(f) { return f.id === _ufFileCtxFileId; });
+  if (!file) return;
+  var locked = file.locked !== false;
+  var isUploader = currentUser && file.uploaderUid === currentUser.uid;
+  if (locked && !isUploader) { toast('This file is locked. Only the uploader can rename it.', 'warn'); return; }
+  showModal('Rename File', 'Enter new name:', { type: 'text', placeholder: file.name, value: file.name }, [
+    { label: 'Rename', cls: 'btn-primary', cb: async function() {
+      var newName = (document.getElementById('modalTextInput').value || '').trim();
+      if (!newName) return;
+      closeModal();
+      try {
+        await window.FB.renameSharedFolderFile(_ufFileCtxFolderId, _ufFileCtxFileId, newName);
+        file.name = newName;
+        renderFilesPage();
+        toast('Renamed to "' + newName + '"', 'success');
+      } catch (err) { toast('Rename failed: ' + (err && err.message ? err.message : 'error'), 'error'); }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+async function ufFileCtxToggleLock() {
+  closeUFFileCtx();
+  var files = unifiedFolderFilesCache[_ufFileCtxFolderId] || [];
+  var file = files.find(function(f) { return f.id === _ufFileCtxFileId; });
+  if (!file) return;
+  var isUploader = currentUser && file.uploaderUid === currentUser.uid;
+  if (!isUploader) { toast('Only the uploader can change lock status', 'warn'); return; }
+  var newLocked = file.locked !== false ? false : true;
+  try {
+    await window.FB.setSharedFolderFileLock(_ufFileCtxFolderId, _ufFileCtxFileId, newLocked);
+    file.locked = newLocked;
+    renderFilesPage();
+    toast(newLocked ? 'File locked — only you can edit' : 'File unlocked — anyone with folder access can edit', 'success');
+  } catch (err) { toast('Failed: ' + (err && err.message ? err.message : 'error'), 'error'); }
+}
+
+function ufFileCtxDelete() {
+  closeUFFileCtx();
+  var files = unifiedFolderFilesCache[_ufFileCtxFolderId] || [];
+  var file = files.find(function(f) { return f.id === _ufFileCtxFileId; });
+  var uf = unifiedFolders.find(function(f) { return f.id === _ufFileCtxFolderId; });
+  if (!file) return;
+  var isUploader = currentUser && file.uploaderUid === currentUser.uid;
+  var isCreator = currentUser && uf && currentUser.uid === uf.creatorUid;
+  if (!isUploader && !isCreator && !isAdminAccount) { toast('Only the uploader or folder creator can delete this file', 'warn'); return; }
+  showModal('Delete File?', '"' + file.name + '" will be moved to the recycle bin.', null, [
+    { label: 'Delete', cls: 'btn-danger', cb: async function() {
+      closeModal();
+      try {
+        await window.FB.softDeleteSharedFolderFile(_ufFileCtxFolderId, _ufFileCtxFileId, currentUser.uid, currentUser.email);
+        if (unifiedFolderFilesCache[_ufFileCtxFolderId]) {
+          unifiedFolderFilesCache[_ufFileCtxFolderId] = unifiedFolderFilesCache[_ufFileCtxFolderId].filter(function(f) { return f.id !== _ufFileCtxFileId; });
+        }
+        renderFilesPage(); updateBinCount();
+        toast('File moved to bin', 'warn');
+      } catch (err) { toast('Failed: ' + (err && err.message ? err.message : 'error'), 'error'); }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
 function uctxOpen() { closeUnifiedCtx(); openUnifiedFolder(unifiedCtxTargetId); }
 function uctxDownload() { closeUnifiedCtx(); downloadUnifiedFolder(unifiedCtxTargetId); }
 function uctxReport() { closeUnifiedCtx(); showUnifiedFolderReport(unifiedCtxTargetId); }
@@ -3147,6 +3470,11 @@ function showModal(title, body, inputCfg, actions) {
 }
 
 function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+function makeModalPassword() {
+  var i = document.getElementById('modalTextInput');
+  if (i) { i.type = 'password'; i.autocomplete = 'new-password'; i.setAttribute('autocomplete', 'new-password'); }
+}
 
 // ─── SETTINGS ─────────────────────────────────────
 function applySettings() {
@@ -3597,6 +3925,10 @@ async function appOnLogin(user, profile) {
   stateLoaded = true;
 
   purgeExpiredBin(); updateBinCount(); applySettings(); updateStats(); updatePreview(); renderOverview();
+  // Reset files tab DOM to My Files (fixes stale Unified Folders tab after logout)
+  filesTab = 'myfiles'; currentUnifiedFolderId = null;
+  var _tf = document.getElementById('tabMyFiles'); if (_tf) _tf.classList.add('active');
+  var _tu = document.getElementById('tabUnified'); if (_tu) _tu.classList.remove('active');
   // Load unified folders then render files page
   loadUnifiedFolders().then(function() { renderFilesPage(); });
   renderDictList();
@@ -3678,6 +4010,7 @@ function renderAdminUsers() {
     var em = escAttr(u.email);
     var acts = '<div class="row-actions">' +
       '<button class="mini-btn" onclick="adminResetPassword(\'' + em + '\')">Reset PW</button>' +
+      '<button class="mini-btn" onclick="adminViewUserDocs(\'' + u.uid + '\',\'' + em + '\')">&#128196; Docs</button>' +
       (isSelf ? '' : '<button class="mini-btn ' + (u.disabled ? 'good' : 'danger') + '" onclick="adminToggleDisable(\'' + u.uid + '\',' + (u.disabled ? 'true' : 'false') + ',\'' + em + '\')">' + (u.disabled ? 'Enable' : 'Disable') + '</button>') +
       (isSelf ? '' : '<button class="mini-btn" onclick="adminSetRole(\'' + u.uid + '\',\'' + (u.role || 'user') + '\',\'' + em + '\')">' + (u.role === 'superadmin' ? 'Make User' : 'Make Admin') + '</button>') +
       (isSelf ? '' : '<button class="mini-btn danger" onclick="adminDeleteData(\'' + u.uid + '\',\'' + em + '\')">Wipe</button>') +
@@ -3726,15 +4059,56 @@ async function adminDoCreateUser() {
   try {
     await window.FB.createUserAccount({ email: email, password: pass, displayName: name, role: role });
     logAct('admin_create_user', 'Created account ' + email + ' (' + role + ')');
+    adminRefresh(); // Refresh user list immediately so new account appears without needing to click Done
     closeModal();
     showRawModal('Account Created &#9989;', 'Share these credentials securely with the user:',
       '<div class="cred-box"><div><span class="k">Email:</span> ' + escH(email) + '</div><div style="margin-top:5px"><span class="k">Password:</span> ' + escH(pass) + '</div></div>',
-      [{ label: 'Done', cls: 'btn-primary', cb: function() { closeModal(); adminRefresh(); } }]);
+      [{ label: 'Done', cls: 'btn-primary', cb: function() { closeModal(); } }]);
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
     toast('Create failed: ' + friendlyAuthError(e), 'error');
   }
 }
+async function adminViewUserDocs(uid, email) {
+  var u = adminUsersCache.find(function(x) { return x.uid === uid; });
+  var displayName = (u && u.displayName) || email;
+  // Load user's state to inspect their document tree
+  toast('Loading documents for ' + displayName + '…', 'info');
+  try {
+    var payload = await window.FB.loadStateForUser ? window.FB.loadStateForUser(uid) : null;
+    if (!payload) {
+      showRawModal('Documents — ' + escH(displayName),
+        'Document stats for this user:',
+        '<div style="padding:10px;font-size:0.8rem;color:var(--text2);">' +
+          '<div>&#128196; Documents: ' + ((u && u.stats && u.stats.docs != null) ? u.stats.docs : '—') + '</div>' +
+          '<div style="margin-top:6px;">&#128196; Matricules: ' + ((u && u.stats && u.stats.mats != null) ? u.stats.mats : '—') + '</div>' +
+          '<div style="margin-top:10px;font-size:0.72rem;color:var(--text3);">Full document list requires user to grant access.</div>' +
+        '</div>',
+        [{ label: 'Close', cls: 'btn-ghost', cb: closeModal }]);
+      return;
+    }
+    // If loadStateForUser is available, show the file tree
+    var docs = [];
+    function gatherDocs(node) { if (node.type === 'file') docs.push(node); if (node.children) node.children.forEach(gatherDocs); }
+    if (payload.fsRoot) gatherDocs(payload.fsRoot);
+    var html = '<div style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">';
+    if (!docs.length) { html += '<div style="color:var(--text3);font-size:0.8rem;">No documents found.</div>'; }
+    docs.forEach(function(d) {
+      var ts = d.modified ? new Date(d.modified).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+      var size = d.content ? (d.content.length >= 1024 ? (d.content.length/1024).toFixed(1)+' KB' : d.content.length+' B') : '0 B';
+      var lines = (d.content||'').split('\n').filter(Boolean).length;
+      html += '<div style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-size:0.79rem;">' +
+        '<div style="font-weight:600;color:var(--green);">&#128196; ' + escH(d.name) + '</div>' +
+        '<div style="font-size:0.68rem;color:var(--text3);font-family:var(--mono);">' + lines + ' entries &bull; ' + size + (ts ? ' &bull; ' + ts : '') + '</div>' +
+        '</div>';
+    });
+    html += '</div>';
+    showRawModal('Documents — ' + escH(displayName), docs.length + ' document(s)', html, [{ label: 'Close', cls: 'btn-ghost', cb: closeModal }]);
+  } catch (e) {
+    showRawModal('Documents — ' + escH(displayName), 'Could not load documents.', '', [{ label: 'Close', cls: 'btn-ghost', cb: closeModal }]);
+  }
+}
+
 async function adminResetPassword(email) {
   try { await window.FB.sendReset(email); logAct('admin_reset', 'Sent password reset to ' + email); toast('Reset email sent to ' + email, 'success'); }
   catch (e) { toast('Could not send reset: ' + friendlyAuthError(e), 'error'); }
@@ -3964,6 +4338,7 @@ if (!CONFIGURED) {
         creatorEmail: data.creatorEmail || '',
         creatorName: data.creatorName || '',
         passwordHash: data.passwordHash || null,
+        color: data.color || 'gold',
         created: serverTimestamp(),
         modified: serverTimestamp()
       });
@@ -3978,6 +4353,7 @@ if (!CONFIGURED) {
           id: d.id, name: x.name, creatorUid: x.creatorUid || '',
           creatorEmail: x.creatorEmail || '', creatorName: x.creatorName || '',
           passwordHash: x.passwordHash || null,
+          color: x.color || 'gold',
           created: x.created && x.created.toMillis ? x.created.toMillis() : null
         });
       });
@@ -3992,6 +4368,7 @@ if (!CONFIGURED) {
           id: d.id, name: x.name, content: x.content || '',
           uploaderUid: x.uploaderUid || '', uploaderEmail: x.uploaderEmail || '',
           uploaderName: x.uploaderName || '',
+          locked: x.locked !== false,
           created: x.created && x.created.toMillis ? x.created.toMillis() : null
         });
       });
@@ -4005,15 +4382,59 @@ if (!CONFIGURED) {
         uploaderUid: fileData.uploaderUid || '',
         uploaderEmail: fileData.uploaderEmail || '',
         uploaderName: fileData.uploaderName || '',
+        locked: true,
         created: serverTimestamp()
       });
       await setDoc(doc(db, 'sharedFolders', folderId), { modified: serverTimestamp() }, { merge: true });
     },
     updateSharedFolder: (folderId, updates) =>
       setDoc(doc(db, 'sharedFolders', folderId), { ...updates, modified: serverTimestamp() }, { merge: true }),
+    renameSharedFolderFile: (folderId, fileId, newName) =>
+      setDoc(doc(db, 'sharedFolders', folderId, 'files', fileId), { name: newName }, { merge: true }),
+    setSharedFolderFileLock: (folderId, fileId, locked) =>
+      setDoc(doc(db, 'sharedFolders', folderId, 'files', fileId), { locked: !!locked }, { merge: true }),
+    async softDeleteSharedFolderFile(folderId, fileId, deletedByUid, deletedByEmail) {
+      const fileSnap = await getDoc(doc(db, 'sharedFolders', folderId, 'files', fileId));
+      if (!fileSnap.exists()) return;
+      const data = fileSnap.data();
+      await addDoc(collection(db, 'sharedFolders', folderId, 'deletedFiles'), {
+        ...data, originalFileId: fileId, deletedAt: serverTimestamp(),
+        deletedByUid: deletedByUid || '', deletedByEmail: deletedByEmail || ''
+      });
+      await deleteDoc(doc(db, 'sharedFolders', folderId, 'files', fileId));
+    },
+    async listDeletedSharedFolderFiles(myUid) {
+      const fSnap = await getDocs(collection(db, 'sharedFolders'));
+      const out = [];
+      await Promise.all([...fSnap.docs].map(async fd => {
+        const folderData = fd.data();
+        const isCreator = folderData.creatorUid === myUid;
+        const dSnap = await getDocs(collection(db, 'sharedFolders', fd.id, 'deletedFiles'));
+        dSnap.forEach(d => {
+          const x = d.data();
+          if (x.uploaderUid === myUid || isCreator) {
+            out.push({ id: d.id, folderId: fd.id, folderName: folderData.name || '?', ...x,
+              deletedAt: x.deletedAt && x.deletedAt.toMillis ? x.deletedAt.toMillis() : null });
+          }
+        });
+      }));
+      return out;
+    },
+    async restoreSharedFolderFile(folderId, binItemId) {
+      const snap = await getDoc(doc(db, 'sharedFolders', folderId, 'deletedFiles', binItemId));
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const { originalFileId, deletedAt, deletedByUid, deletedByEmail, ...fileData } = data;
+      await addDoc(collection(db, 'sharedFolders', folderId, 'files'), { ...fileData, created: serverTimestamp() });
+      await deleteDoc(doc(db, 'sharedFolders', folderId, 'deletedFiles', binItemId));
+    },
+    permanentDeleteSharedFolderFile: (folderId, binItemId) =>
+      deleteDoc(doc(db, 'sharedFolders', folderId, 'deletedFiles', binItemId)),
     async deleteSharedFolder(folderId) {
       const sub = await getDocs(collection(db, 'sharedFolders', folderId, 'files'));
       const dels = []; sub.forEach(d => dels.push(deleteDoc(d.ref)));
+      const dSub = await getDocs(collection(db, 'sharedFolders', folderId, 'deletedFiles'));
+      dSub.forEach(d => dels.push(deleteDoc(d.ref)));
       if (dels.length) await Promise.all(dels);
       await deleteDoc(doc(db, 'sharedFolders', folderId));
     }
