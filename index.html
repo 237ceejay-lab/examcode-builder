@@ -765,7 +765,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         <button class="btn" id="viewListBtn" title="List view" onclick="setFilesView('list')">&#128203;</button>
       </div>
       <button class="btn btn-ghost btn-sm" id="selAllBtn" onclick="toggleSelectAll()">&#9745; All</button>
-      <button class="btn btn-ghost btn-sm" id="createFolderBtn" onclick="createFolder()">+ Folder</button>
+      <button class="btn btn-orange btn-sm" id="createFolderBtn" onclick="createFolder()">+ Folder</button>
       <button class="btn btn-orange btn-sm" id="createUnifiedFolderBtn" onclick="createUnifiedFolder()" style="display:none;">+ Unified</button>
       <button class="btn btn-orange btn-sm" id="createUFSubfolderBtn" onclick="createUFSubfolder()" style="display:none;">+ Folder</button>
       <button class="btn btn-import btn-sm" id="importFileBtn" onclick="importFile()">&#11014; Import CSV</button>
@@ -832,7 +832,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <button class="btn btn-primary btn-sm btn-full" style="margin-top:4px" onclick="addDictEntry()">+ Add Entry</button>
       <button class="btn btn-ghost btn-sm btn-full" style="margin-top:4px" onclick="clearDictionary()">&#128465; Clear Dictionary</button>
     </div>
-    <div class="set-card">
+    <div class="set-card admin-only" style="display:none;">
       <div class="set-title">Danger Zone</div>
       <button class="btn btn-danger btn-sm" onclick="nukeStorage()">&#9888; Clear ALL Data</button>
     </div>
@@ -1024,6 +1024,7 @@ var filesView = 'list';
 var _skipTitleCheck = false;
 var recycleBin = [];   // [{id, node, originalParentId, deletedAt}]
 var viewingBin = false;
+var _lastSelectedRowIdx = -1;
 
 // ─── UNIFIED FOLDERS STATE ────────────────────────
 var filesTab = 'myfiles';
@@ -1203,14 +1204,19 @@ function generateTable() {
   var n = parseInt(gv('numScripts'));
   if (!pre) { toast('Enter exam code prefix', 'warn'); return; }
   if (!n || n < 1) { toast('Enter number of scripts', 'warn'); return; }
-  if (rows.length > 0) {
-    showModal('Reset Table?', 'This will clear all existing matricules. Continue?', null, [
-      { label:'Reset', cls:'btn-danger', cb: function() { closeModal(); _buildRows(pre, n); } },
-      { label:'Cancel', cls:'btn-ghost', cb: closeModal }
+  if (rows.length === 0) { _buildRows(pre, n); return; }
+  // Detect current prefix from first exam code
+  var existingPre = rows[0].examCode.replace(/\d+$/, '');
+  if (existingPre !== pre) {
+    showModal('Reset Table?', 'The prefix changed (' + existingPre + ' → ' + pre + ').\nThis will clear all existing matricules. Continue?', null, [
+      { label: 'Reset', cls: 'btn-danger', cb: function() { closeModal(); _buildRows(pre, n); } },
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
     ]);
     return;
   }
-  _buildRows(pre, n);
+  if (n === rows.length) { toast('Table already has ' + n + ' rows with prefix ' + pre, 'warn'); return; }
+  if (n > rows.length) { _extendRows(pre, n); }
+  else { _trimRows(pre, n); }
 }
 
 function _buildRows(pre, n) {
@@ -1220,6 +1226,7 @@ function _buildRows(pre, n) {
     rows.push({ id: genId(), examCode: pre + String(i).padStart(pad, '0'), matricule: '' });
   }
   selectedRows.clear();
+  _lastSelectedRowIdx = -1;
   activeRowId = rows[0] ? rows[0].id : null;
   renderTable();
   updateStats();
@@ -1230,6 +1237,55 @@ function _buildRows(pre, n) {
   var code = gv('courseCode'), title = gv('courseTitle');
   if (code && title) { courseDict[code] = title; saveToStorage(); }
   document.getElementById('doneBar').style.display = 'flex';
+}
+
+function _extendRows(pre, n) {
+  var added = n - rows.length;
+  var pad = Math.max(2, String(n).length);
+  // Re-index existing rows in case digit count grew (e.g. 99→100)
+  rows.forEach(function(r, i) { r.examCode = pre + String(i + 1).padStart(pad, '0'); });
+  for (var k = rows.length + 1; k <= n; k++) {
+    rows.push({ id: genId(), examCode: pre + String(k).padStart(pad, '0'), matricule: '' });
+  }
+  _lastSelectedRowIdx = -1;
+  renderTable(); updateStats(); checkDuplicates(); saveToStorage();
+  toast('Added ' + added + ' row(s) — table now has ' + n + ' entries', 'success');
+  document.getElementById('doneBar').style.display = 'flex';
+}
+
+function _trimRows(pre, n) {
+  var toRemove = rows.slice(n);
+  var withData = toRemove.filter(function(r) { return r.matricule && r.matricule.trim(); });
+  function doTrim() {
+    rows = rows.slice(0, n);
+    var pad = Math.max(2, String(n).length);
+    rows.forEach(function(r, i) { r.examCode = pre + String(i + 1).padStart(pad, '0'); });
+    if (activeRowId && !rows.find(function(r) { return r.id === activeRowId; })) {
+      activeRowId = rows.length > 0 ? rows[rows.length - 1].id : null;
+    }
+    selectedRows = new Set(Array.from(selectedRows).filter(function(id) {
+      return rows.some(function(r) { return r.id === id; });
+    }));
+    _lastSelectedRowIdx = -1;
+    renderTable(); updateStats(); checkDuplicates(); saveToStorage();
+    toast('Reduced to ' + n + ' rows', 'success');
+    if (rows.length === 0) document.getElementById('doneBar').style.display = 'none';
+  }
+  if (withData.length > 0) {
+    var examples = withData.slice(0, 5).map(function(r) { return r.examCode + ': “' + r.matricule + '”'; }).join('\n');
+    var moreMsg = withData.length > 5 ? '\n…and ' + (withData.length - 5) + ' more' : '';
+    showModal(
+      'Assigned Matricules Will Be Deleted',
+      withData.length + ' row(s) being removed already have matricules:\n\n' + examples + moreMsg + '\n\nReduce to ' + n + ' rows anyway? This cannot be undone.',
+      null,
+      [
+        { label: 'Delete & Reduce', cls: 'btn-danger', cb: function() { closeModal(); doTrim(); } },
+        { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+      ]
+    );
+  } else {
+    doTrim();
+  }
 }
 
 // ─── TABLE RENDER ─────────────────────────────────
@@ -1250,7 +1306,7 @@ function renderTable() {
     var dupe = duplicateIds.has(r.id);
     var sel = selectedRows.has(r.id);
     html += '<tr id="tr-' + r.id + '" class="' + (active ? 'active-row' : '') + ' ' + (dupe ? 'duplicate' : '') + '">' +
-      '<td><input type="checkbox" ' + (sel ? 'checked' : '') + ' onchange="toggleRowSel(\'' + r.id + '\',this.checked)" style="accent-color:var(--accent)"></td>' +
+      '<td><input type="checkbox" ' + (sel ? 'checked' : '') + ' onclick="onRowCheckClick(event,\'' + r.id + '\')" style="accent-color:var(--accent)"></td>' +
       '<td class="row-num">' + (i + 1) + '</td>' +
       '<td class="exam-code-cell">' + escH(r.examCode) + (dupe ? '<span class="dupe-badge">DUPE</span>' : '') + '</td>' +
       '<td><input class="matric-input' + (r.matricule ? '' : ' empty') + '" id="inp-' + r.id + '"' +
@@ -1335,10 +1391,30 @@ function toggleAllRows(checked) {
   rows.forEach(function(r) { if (checked) selectedRows.add(r.id); else selectedRows.delete(r.id); });
   document.querySelectorAll('tbody input[type=checkbox]').forEach(function(cb) { cb.checked = checked; });
   document.getElementById('selCount').textContent = selectedRows.size;
+  _lastSelectedRowIdx = -1;
 }
 
 function toggleRowSel(id, checked) {
   if (checked) selectedRows.add(id); else selectedRows.delete(id);
+  document.getElementById('selCount').textContent = selectedRows.size;
+}
+
+function onRowCheckClick(e, id) {
+  var idx = rows.findIndex(function(r) { return r.id === id; });
+  if (e.shiftKey && _lastSelectedRowIdx >= 0 && idx >= 0) {
+    var start = Math.min(idx, _lastSelectedRowIdx);
+    var end = Math.max(idx, _lastSelectedRowIdx);
+    var becoming = !selectedRows.has(id);
+    for (var i = start; i <= end; i++) {
+      if (becoming) selectedRows.add(rows[i].id); else selectedRows.delete(rows[i].id);
+      var tr = document.getElementById('tr-' + rows[i].id);
+      if (tr) { var cb = tr.querySelector('input[type=checkbox]'); if (cb) cb.checked = becoming; }
+    }
+  } else {
+    var checked = e.target.checked;
+    if (checked) selectedRows.add(id); else selectedRows.delete(id);
+    _lastSelectedRowIdx = idx;
+  }
   document.getElementById('selCount').textContent = selectedRows.size;
 }
 
@@ -1474,12 +1550,20 @@ function shiftSelectedRows(dir) {
     return;
   }
   var indices = sel.map(function(id) { return rows.findIndex(function(r) { return r.id === id; }); }).sort(function(a, b) { return a - b; });
+  // Boundary check: refuse to move if the whole block can't shift
+  if (dir === 'up' && indices[0] === 0) { toast('Selection is already at the top of the table', 'warn'); return; }
+  if (dir === 'down' && indices[indices.length - 1] === rows.length - 1) { toast('Selection is already at the bottom of the table', 'warn'); return; }
   if (dir === 'up') {
-    indices.forEach(function(i) { if (i > 0) { var t = rows[i].matricule; rows[i].matricule = rows[i-1].matricule; rows[i-1].matricule = t; } });
+    indices.forEach(function(i) {
+      var t = rows[i].matricule; rows[i].matricule = rows[i - 1].matricule; rows[i - 1].matricule = t;
+    });
   } else {
-    indices.reverse().forEach(function(i) { if (i < rows.length - 1) { var t = rows[i].matricule; rows[i].matricule = rows[i+1].matricule; rows[i+1].matricule = t; } });
+    indices.slice().reverse().forEach(function(i) {
+      var t = rows[i].matricule; rows[i].matricule = rows[i + 1].matricule; rows[i + 1].matricule = t;
+    });
   }
   renderTable(); checkDuplicates(); autoSaveDebounced();
+  toast('Moved ' + sel.length + ' row(s) ' + dir, 'success');
 }
 
 function insertRowBelow() {
@@ -1816,7 +1900,15 @@ function _handleResult(e) {
           silenceTimerHandle = setTimeout(function() {
             silenceTimerHandle = null;
             if (!isListening) return;
-            if (activeRowId === snapId) advanceRow(snapId, 1);
+            if (activeRowId === snapId) {
+              var isLast = rows.length > 0 && rows[rows.length - 1].id === snapId;
+              advanceRow(snapId, 1);
+              // If still on same row after advance attempt, we're at the last row
+              if (isLast && activeRowId === snapId && isListening) {
+                stopVoice();
+                toast('Last row reached — all ' + rows.length + ' rows complete. Voice stopped.', 'success');
+              }
+            }
           }, appliedSilenceMs || 1000);
         })(targetRowId);
       }
@@ -1938,6 +2030,11 @@ function processVoiceInput(transcript, targetRowId) {
   var vs = document.getElementById('vStatus');
   if (vs) vs.textContent = 'Set ' + r.examCode + ': ' + full;
   checkDuplicates(); updateStats(); autoSaveDebounced();
+  // Auto-stop when last row filled and auto-advance is OFF (the silence-timer handles the ON case)
+  if (!settings.autoAdvance && isListening && rows.length > 0 && rows[rows.length - 1].id === rowId) {
+    stopVoice();
+    toast('Last row reached — all ' + rows.length + ' rows complete. Voice stopped.', 'success');
+  }
 }
 
 function resetSilenceTimer(forRowId) {
@@ -3660,6 +3757,8 @@ async function _executeUFFilesMove(sel, folderId, parentSubfolderId, uf) {
       targetName = newName;
     }
     usedNames.push(targetName);
+    var nodeId = sel[i];
+    var nodeName = node.name;
     try {
       await window.FB.addFileToSharedFolder(folderId, {
         name: targetName, content: node.content || '',
@@ -3667,10 +3766,32 @@ async function _executeUFFilesMove(sel, folderId, parentSubfolderId, uf) {
         uploaderName: (currentProfile && currentProfile.displayName) || currentUser.email,
         parentSubfolderId: parentSubfolderId || null
       });
-      removeFromParent(fsRoot, sel[i]);
+      removeFromParent(fsRoot, nodeId);
       moved++;
-      logAct('move_to_unified', node.name + ' → "' + uf.name + '"');
-    } catch (e) { toast('Failed to move ' + node.name, 'error'); }
+      logAct('move_to_unified', nodeName + ' → "' + uf.name + '"');
+    } catch (e) {
+      // Firebase sometimes rejects the promise even when the write committed
+      // (offline-persistence acknowledgement timeout). Re-fetch the folder to
+      // check the true server state before deciding how to handle this.
+      console.warn('addFileToSharedFolder promise rejected — verifying server state:', e);
+      try {
+        await loadUnifiedFolderFiles(folderId);
+        var freshFiles = unifiedFolderFilesCache[folderId] || [];
+        var landed = freshFiles.some(function(f) { return f.name === targetName; });
+        if (landed) {
+          // Write committed — remove from My Files and count it as success
+          removeFromParent(fsRoot, nodeId);
+          moved++;
+          logAct('move_to_unified', nodeName + ' → "' + uf.name + '"');
+        } else {
+          // Write truly failed — leave My Files intact and notify the user
+          toast('Failed to move "' + nodeName + '" — please try again', 'error');
+        }
+      } catch (e2) {
+        // Can't verify — leave file in My Files and warn
+        toast('Could not verify move for "' + nodeName + '" — check the destination folder', 'warn');
+      }
+    }
   }
   if (moved > 0) {
     saveToStorage();
