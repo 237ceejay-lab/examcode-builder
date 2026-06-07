@@ -767,6 +767,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <button class="btn btn-ghost btn-sm" id="selAllBtn" onclick="toggleSelectAll()">&#9745; All</button>
       <button class="btn btn-ghost btn-sm" id="createFolderBtn" onclick="createFolder()">+ Folder</button>
       <button class="btn btn-ghost btn-sm" id="createUnifiedFolderBtn" onclick="createUnifiedFolder()" style="display:none;">+ Unified</button>
+      <button class="btn btn-ghost btn-sm" id="createUFSubfolderBtn" onclick="createUFSubfolder()" style="display:none;">+ Folder</button>
       <button class="btn btn-import btn-sm" id="importFileBtn" onclick="importFile()">&#11014; Import CSV</button>
       <button class="btn btn-download btn-sm" onclick="downloadSelected()">&#11015; Download</button>
       <button class="btn btn-danger btn-sm" onclick="deleteSelected()">&#128465; Delete</button>
@@ -943,6 +944,12 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
   <div class="ctx-item danger" id="ufFileCtxDelete" onclick="ufFileCtxDelete()">&#128465; Delete</div>
 </div>
 
+<div class="ctx-menu" id="ufSubCtxMenu">
+  <div class="ctx-item" onclick="ufSubCtxRename()">&#9999;&#65039; Rename</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" onclick="ufSubCtxDelete()">&#128465; Delete Folder</div>
+</div>
+
 <div id="toasts"></div>
 
 <!-- WELCOME OVERLAY -->
@@ -1028,6 +1035,8 @@ var _openedFromUnifiedFolderCtx = null; // {folderId, fileId, fileName} when fil
 var selectedUnifiedFiles = new Set(); // selected file IDs in unified folder view
 var _modalFocusTimer = null;   // prevent focus-timer accumulation across showModal calls
 var _openFolderGuard = false;  // prevent re-entry on openUnifiedFolder
+var currentUFSubfolderId = null; // current subfolder within a unified folder (null = root)
+var unifiedSubfoldersCache = {}; // folderId -> [{ id, name, creatorUid, createdAt }]
 
 // ─── ONLINE / AUTH STATE ──────────────────────────
 var currentUser    = null;   // { uid, email }
@@ -1051,10 +1060,11 @@ window.addEventListener('load', function() {
     if (!e.target.closest('#ctxMenu')) closeCtx();
     if (!e.target.closest('#unifiedCtxMenu')) closeUnifiedCtx();
     if (!e.target.closest('#ufFileCtxMenu')) closeUFFileCtx();
+    if (!e.target.closest('#ufSubCtxMenu')) closeUFSubCtx();
     if (!e.target.closest('#acList') && !e.target.closest('#courseCode')) hideSuggestions();
   });
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeModal(); closeCtx(); closeUnifiedCtx(); closeUFFileCtx(); }
+    if (e.key === 'Escape') { closeModal(); closeCtx(); closeUnifiedCtx(); closeUFFileCtx(); closeUFSubCtx(); }
   });
   // Fallback: if the Firebase engine never initialises (offline / blocked), tell the user.
   setTimeout(function() {
@@ -2263,6 +2273,12 @@ function navToRoot() { navTo('root'); }
 function navigateBack() {
   if (viewingBin) { hideBin(); return; }
   if (filesTab === 'unified') {
+    if (currentUFSubfolderId !== null) {
+      currentUFSubfolderId = null;
+      selectedUnifiedFiles.clear();
+      renderFilesPage();
+      return;
+    }
     currentUnifiedFolderId = null;
     selectedFiles.clear();
     selectedUnifiedFiles.clear();
@@ -2420,69 +2436,92 @@ function moveSelected() {
   var sel = Array.from(selectedFiles);
   if (!sel.length) { toast('Select files first', 'warn'); return; }
   var selSet = new Set(sel);
-
-  // Collect My Files folders, sorted by most recently modified
-  var myFolders = [];
-  function collectF(node, depth) {
-    if (node.type === 'folder' && node.id !== curFolderId && !selSet.has(node.id))
-      myFolders.push({ id: node.id, label: depth === 0 ? 'My Files (root)' : node.name, modified: node.modified || node.created || 0 });
-    if (node.children) node.children.filter(function(c) { return c.type === 'folder'; }).forEach(function(c) { collectF(c, depth + 1); });
-  }
-  collectF(fsRoot, 0);
-  myFolders.sort(function(a, b) { return b.modified - a.modified; });
-
-  if (!myFolders.length) { toast('No destination folders available', 'warn'); return; }
-
-  window._moveDest = myFolders[0] ? myFolders[0].id : null;
-
-  var listHtml =
-    '<div style="margin-top:8px;">' +
-    '<input id="moveFolderSearch" class="finput" placeholder="&#128269; Search folders\u2026" oninput="window._filterMoveItems()" style="margin-bottom:8px;">' +
-    '<div id="moveFolderList" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;">' +
-    myFolders.map(function(f) {
-      return '<div class="move-folder-item" data-id="' + f.id + '" data-label="' + escH(f.label) + '" onclick="window._selectMoveItem(this)" style="padding:9px 12px;border-radius:8px;cursor:pointer;font-size:0.8rem;color:var(--text2);border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:8px;transition:all .15s;">&#128193; ' + escH(f.label) + '</div>';
-    }).join('') +
-    '</div></div>';
-
-  showRawModal('Move ' + sel.length + ' item(s) To', 'Select destination folder:', listHtml, [
-    { label: 'Move', cls: 'btn-primary', cb: function() {
-      var destId = window._moveDest;
-      if (!destId) { toast('Select a folder first', 'warn'); return; }
-      var nodesToMove = sel.map(function(id) { return findNode(fsRoot, id); }).filter(Boolean);
-      if (!nodesToMove.length) { closeModal(); return; }
-      nodesToMove.forEach(function(node) { removeFromParent(fsRoot, node.id); });
-      var dest = findNode(fsRoot, destId);
-      if (!dest) { toast('Destination folder not found', 'error'); closeModal(); return; }
-      if (!Array.isArray(dest.children)) dest.children = [];
-      nodesToMove.forEach(function(node) { dest.children.push(node); });
-      dest.modified = new Date().getTime();
-      selectedFiles.clear();
-      saveToStorage(); renderFilesPage(); closeModal();
-      toast('Moved ' + nodesToMove.length + ' item(s) to "' + (dest.id === 'root' ? 'My Files' : dest.name) + '"\u2019', 'success');
-    }},
-    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
-  ]);
-
-  setTimeout(function() {
-    var items = document.querySelectorAll('.move-folder-item');
-    if (items.length) { items[0].style.borderColor = 'var(--accent)'; items[0].style.color = 'var(--text)'; }
-  }, 60);
+  window._moveCtx = { sel: sel, selSet: selSet, browseFolderId: 'root' };
+  _openMoveFolderModal();
 }
 
-window._selectMoveItem = function(el) {
-  document.querySelectorAll('.move-folder-item').forEach(function(x) {
-    x.style.borderColor = 'var(--border)'; x.style.color = 'var(--text2)';
-  });
-  el.style.borderColor = 'var(--accent)'; el.style.color = 'var(--text)';
-  window._moveDest = el.dataset.id;
+function _openMoveFolderModal() {
+  var ctx = window._moveCtx;
+  showRawModal(
+    'Move ' + ctx.sel.length + ' item(s)',
+    'Navigate to the destination folder:',
+    _buildMoveModalContent(),
+    [
+      { label: 'Move Here', cls: 'btn-primary', cb: _executeMoveToFolder },
+      { label: 'Cancel', cls: 'btn-ghost', cb: function() { closeModal(); window._moveCtx = null; } }
+    ]
+  );
+}
+
+function _buildMoveModalContent() {
+  var ctx = window._moveCtx;
+  var folderId = ctx.browseFolderId;
+  var folder = findNode(fsRoot, folderId);
+  var selSet = ctx.selSet;
+  var ancestors = getAncestors(folderId);
+  var crumbHtml = ancestors.map(function(n, i) {
+    var label = i === 0 ? 'My Files' : n.name;
+    if (i === ancestors.length - 1) return '<span style="color:var(--text);font-weight:600;">' + escH(label) + '</span>';
+    return '<span style="cursor:pointer;color:var(--accent);text-decoration:underline;" onclick="window._moveNavTo(\'' + n.id + '\')">' + escH(label) + '</span>';
+  }).join('<span style="color:var(--text3);margin:0 3px;">/</span>');
+  var subFolders = (folder && folder.children || []).filter(function(c) {
+    return c.type === 'folder' && !selSet.has(c.id);
+  }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+  var destLabel = folderId === 'root' ? 'My Files' : (folder ? folder.name : '?');
+  var html = '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">';
+  html += '<div style="font-size:0.7rem;padding:5px 9px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);line-height:1.7;font-family:var(--mono);">&#128193; ' + crumbHtml + '</div>';
+  html += '<div style="padding:8px 12px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.3);border-radius:8px;font-size:0.8rem;color:var(--accent);font-weight:600;">&#128194; Move into: <strong>' + escH(destLabel) + '</strong></div>';
+  html += '<div id="moveFolderList" style="display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;">';
+  if (!subFolders.length) {
+    html += '<div style="font-size:0.75rem;color:var(--text3);padding:10px;text-align:center;font-style:italic;">No subfolders here &mdash; click <strong>Move Here</strong> to save in <em>' + escH(destLabel) + '</em></div>';
+  } else {
+    subFolders.forEach(function(f) {
+      html += '<div onclick="window._moveNavInto(\'' + f.id + '\')"' +
+        ' style="padding:9px 12px;border-radius:8px;cursor:pointer;font-size:0.8rem;border:1px solid var(--border);background:var(--surface2);color:var(--text2);display:flex;align-items:center;justify-content:space-between;gap:8px;transition:all .15s;"' +
+        ' onmouseover="this.style.borderColor=\'var(--border2)\';this.style.background=\'var(--surface3)\';this.style.color=\'var(--text)\'"' +
+        ' onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--surface2)\';this.style.color=\'var(--text2)\'">' +
+        '<span>&#128193; ' + escH(f.name) + '</span>' +
+        '<span style="color:var(--text3);font-size:0.72rem;white-space:nowrap;">Open &#9658;</span>' +
+        '</div>';
+    });
+  }
+  html += '</div></div>';
+  return html;
+}
+
+window._moveNavInto = function(folderId) {
+  if (!window._moveCtx) return;
+  window._moveCtx.browseFolderId = folderId;
+  var ia = document.getElementById('modalInputArea');
+  if (ia) ia.innerHTML = _buildMoveModalContent();
 };
 
-window._filterMoveItems = function() {
-  var q = (document.getElementById('moveFolderSearch').value || '').toLowerCase();
-  document.querySelectorAll('.move-folder-item').forEach(function(x) {
-    x.style.display = (!q || (x.dataset.label || '').toLowerCase().indexOf(q) !== -1) ? '' : 'none';
-  });
+window._moveNavTo = function(folderId) {
+  if (!window._moveCtx) return;
+  window._moveCtx.browseFolderId = folderId;
+  var ia = document.getElementById('modalInputArea');
+  if (ia) ia.innerHTML = _buildMoveModalContent();
 };
+
+function _executeMoveToFolder() {
+  var ctx = window._moveCtx;
+  if (!ctx) return;
+  var destId = ctx.browseFolderId;
+  var sel = ctx.sel;
+  var nodesToMove = sel.map(function(id) { return findNode(fsRoot, id); }).filter(Boolean);
+  if (!nodesToMove.length) { closeModal(); return; }
+  nodesToMove.forEach(function(node) { removeFromParent(fsRoot, node.id); });
+  var dest = findNode(fsRoot, destId);
+  if (!dest) { toast('Destination folder not found', 'error'); closeModal(); return; }
+  if (!Array.isArray(dest.children)) dest.children = [];
+  nodesToMove.forEach(function(node) { dest.children.push(node); });
+  dest.modified = Date.now();
+  selectedFiles.clear();
+  saveToStorage(); renderFilesPage(); closeModal();
+  window._moveCtx = null;
+  var destName = destId === 'root' ? 'My Files' : dest.name;
+  toast('Moved ' + nodesToMove.length + ' item(s) to "' + destName + '"', 'success');
+}
 function removeFromParent(root, id) {
   if (root.children) {
     var i = root.children.findIndex(function(c) { return c.id === id; });
@@ -2863,11 +2902,14 @@ function switchFilesTab(tab) {
   var selAllBtn = document.getElementById('selAllBtn');
   if (createFolderBtn) createFolderBtn.style.display = tab === 'myfiles' ? '' : 'none';
   if (createUnifiedBtn) createUnifiedBtn.style.display = tab === 'unified' ? '' : 'none';
+  var createUFSubBtn = document.getElementById('createUFSubfolderBtn');
+  if (createUFSubBtn) createUFSubBtn.style.display = 'none';
   if (importBtn) importBtn.style.display = tab === 'myfiles' ? '' : 'none';
   if (selAllBtn) selAllBtn.style.display = tab === 'myfiles' ? '' : 'none';
   selectedFiles.clear();
   selectedUnifiedFiles.clear();
   currentUnifiedFolderId = null;
+  currentUFSubfolderId = null;
   renderFilesPage();
 }
 
@@ -2937,6 +2979,120 @@ async function loadUnifiedFolderFiles(folderId) {
   catch (e) { console.warn('Could not load folder files', e); unifiedFolderFilesCache[folderId] = []; }
 }
 
+async function loadUnifiedSubfolders(folderId) {
+  if (!window.FB || !window.FB.listUnifiedSubfolders) return;
+  try { unifiedSubfoldersCache[folderId] = await window.FB.listUnifiedSubfolders(folderId); }
+  catch (e) { console.warn('Could not load subfolders', e); unifiedSubfoldersCache[folderId] = []; }
+}
+
+function enterUFSubfolder(subfolderId) {
+  currentUFSubfolderId = subfolderId;
+  selectedUnifiedFiles.clear();
+  renderFilesPage();
+}
+
+function exitUFSubfolder() {
+  currentUFSubfolderId = null;
+  selectedUnifiedFiles.clear();
+  renderFilesPage();
+}
+
+function createUFSubfolder() {
+  if (!currentUnifiedFolderId) return;
+  var folderId = currentUnifiedFolderId;
+  showModal('New Subfolder', 'Enter subfolder name:', 'text', '', function(name) {
+    name = (name || '').trim();
+    if (!name) { toast('Please enter a name', 'warn'); return; }
+    if (!window.FB || !window.FB.createUnifiedSubfolder) { toast('Not connected to server', 'error'); return; }
+    window.FB.createUnifiedSubfolder(folderId, name, currentUser.uid, currentUser.email).then(function() {
+      delete unifiedSubfoldersCache[folderId];
+      renderFilesPage();
+      toast('Subfolder "' + name + '" created', 'success');
+    }).catch(function(e) { toast('Could not create subfolder: ' + (e && e.message ? e.message : 'error'), 'error'); });
+  });
+}
+
+var _ufSubCtxFolderId = null;
+var _ufSubCtxSubfolderId = null;
+var _ufSubLongPressTimer = null;
+
+function showUFSubfolderCtx(e, folderId, subfolderId) {
+  e.preventDefault(); e.stopPropagation();
+  var uf = unifiedFolders.find(function(f) { return f.id === folderId; });
+  var isCreator = currentUser && uf && currentUser.uid === uf.creatorUid;
+  var cached = unifiedSubfoldersCache[folderId] || [];
+  var sub = cached.find(function(s) { return s.id === subfolderId; });
+  var isSubCreator = currentUser && sub && sub.creatorUid === currentUser.uid;
+  if (!isCreator && !isSubCreator && !isAdminAccount) return;
+  _ufSubCtxFolderId = folderId;
+  _ufSubCtxSubfolderId = subfolderId;
+  var m = document.getElementById('ufSubCtxMenu');
+  if (!m) return;
+  m.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+  m.style.top = Math.min(e.clientY, window.innerHeight - 80) + 'px';
+  m.classList.add('open');
+}
+
+function closeUFSubCtx() {
+  var m = document.getElementById('ufSubCtxMenu');
+  if (m) m.classList.remove('open');
+}
+
+function ufSubCtxRename() {
+  closeUFSubCtx();
+  var folderId = _ufSubCtxFolderId;
+  var subfolderId = _ufSubCtxSubfolderId;
+  if (!folderId || !subfolderId) return;
+  var cached = unifiedSubfoldersCache[folderId] || [];
+  var sub = cached.find(function(s) { return s.id === subfolderId; });
+  showModal('Rename Subfolder', 'Enter new name:', 'text', sub ? sub.name : '', function(name) {
+    name = (name || '').trim();
+    if (!name) { toast('Please enter a name', 'warn'); return; }
+    if (!window.FB || !window.FB.renameUnifiedSubfolder) { toast('Not connected to server', 'error'); return; }
+    window.FB.renameUnifiedSubfolder(folderId, subfolderId, name).then(function() {
+      var arr = unifiedSubfoldersCache[folderId] || [];
+      var s = arr.find(function(x) { return x.id === subfolderId; });
+      if (s) s.name = name;
+      renderFilesPage();
+      toast('Subfolder renamed to "' + name + '"', 'success');
+    }).catch(function(e) { toast('Could not rename: ' + (e && e.message ? e.message : 'error'), 'error'); });
+  });
+}
+
+function ufSubCtxDelete() {
+  closeUFSubCtx();
+  var folderId = _ufSubCtxFolderId;
+  var subfolderId = _ufSubCtxSubfolderId;
+  if (!folderId || !subfolderId) return;
+  var cached = unifiedSubfoldersCache[folderId] || [];
+  var sub = cached.find(function(s) { return s.id === subfolderId; });
+  var subName = sub ? sub.name : '?';
+  showRawModal('Delete Subfolder', 'Delete "' + escH(subName) + '"?',
+    '<div style="margin-top:8px;padding:10px;background:rgba(255,70,70,0.08);border:1px solid rgba(255,70,70,0.3);border-radius:7px;font-size:0.8rem;color:var(--red);">Files inside will be moved to the folder root — they will not be deleted.</div>',
+    [
+      { label: 'Delete', cls: 'btn-danger', cb: function() {
+        if (!window.FB || !window.FB.deleteUnifiedSubfolder) { toast('Not connected to server', 'error'); return; }
+        window.FB.deleteUnifiedSubfolder(folderId, subfolderId).then(function() {
+          delete unifiedSubfoldersCache[folderId];
+          delete unifiedFolderFilesCache[folderId];
+          if (currentUFSubfolderId === subfolderId) currentUFSubfolderId = null;
+          closeModal();
+          renderFilesPage();
+          toast('Subfolder deleted', 'success');
+        }).catch(function(e) { closeModal(); toast('Could not delete: ' + (e && e.message ? e.message : 'error'), 'error'); });
+      }},
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]
+  );
+}
+
+function ufSubTouchStart(e, folderId, subfolderId) {
+  _ufSubLongPressTimer = setTimeout(function() {
+    _longPressTriggered = true;
+    showUFSubfolderCtx({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, preventDefault: function(){}, stopPropagation: function(){} }, folderId, subfolderId);
+  }, 600);
+}
+
 function navToUnifiedRoot() {
   currentUnifiedFolderId = null;
   selectedFiles.clear();
@@ -2946,15 +3102,47 @@ function navToUnifiedRoot() {
 
 function renderUnifiedFoldersPage() {
   var pc = document.getElementById('pathCrumb');
+  var createUnifiedBtn = document.getElementById('createUnifiedFolderBtn');
+  var createFolderBtn = document.getElementById('createFolderBtn');
+  var createUFSubBtn = document.getElementById('createUFSubfolderBtn');
+
   if (currentUnifiedFolderId) {
+    // Inside a unified folder: hide + Unified and top-level + Folder
+    if (createUnifiedBtn) createUnifiedBtn.style.display = 'none';
+    if (createFolderBtn) createFolderBtn.style.display = 'none';
     var uf = unifiedFolders.find(function(f) { return f.id === currentUnifiedFolderId; });
-    if (pc) {
-      pc.innerHTML = '<span class="crumb" onclick="navToUnifiedRoot()">&#127760; Unified Folders</span>' +
-        '<span class="crumb-sep">/</span>' +
-        '<span>' + escH((uf && uf.name) || '?') + '</span>';
+    var ufName = escH((uf && uf.name) || '?');
+    if (currentUFSubfolderId !== null) {
+      // Inside a subfolder: hide + Folder too (no nested subfolders)
+      if (createUFSubBtn) createUFSubBtn.style.display = 'none';
+      var subName = '';
+      var cached = unifiedSubfoldersCache[currentUnifiedFolderId];
+      if (cached) {
+        var sub = cached.find(function(s) { return s.id === currentUFSubfolderId; });
+        subName = sub ? escH(sub.name) : '?';
+      }
+      if (pc) {
+        pc.innerHTML = '<span class="crumb" onclick="navToUnifiedRoot()">&#127760; Unified Folders</span>' +
+          '<span class="crumb-sep">/</span>' +
+          '<span class="crumb" onclick="exitUFSubfolder()">' + ufName + '</span>' +
+          '<span class="crumb-sep">/</span>' +
+          '<span>' + subName + '</span>';
+      }
+    } else {
+      // UF root: show + Folder for creating subfolders
+      if (createUFSubBtn) createUFSubBtn.style.display = '';
+      if (pc) {
+        pc.innerHTML = '<span class="crumb" onclick="navToUnifiedRoot()">&#127760; Unified Folders</span>' +
+          '<span class="crumb-sep">/</span>' +
+          '<span>' + ufName + '</span>';
+      }
     }
     renderUnifiedFolderContent(currentUnifiedFolderId);
   } else {
+    // Unified folders list: show + Unified, hide + Folder and + Folder (UF sub)
+    if (createUnifiedBtn) createUnifiedBtn.style.display = '';
+    if (createFolderBtn) createFolderBtn.style.display = 'none';
+    if (createUFSubBtn) createUFSubBtn.style.display = 'none';
     if (pc) pc.innerHTML = '<span>&#127760; Unified Folders</span>';
     renderUnifiedFoldersList();
     updateSelActionBar();
@@ -3083,48 +3271,95 @@ async function batchMoveUFToMyFiles() {
 async function renderUnifiedFolderContent(folderId) {
   var grid = document.getElementById('filesGrid');
   if (!grid) return;
+
+  // Load files if not cached
   if (!unifiedFolderFilesCache[folderId]) {
     grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128257;</div><p>Loading…</p></div>';
     await loadUnifiedFolderFiles(folderId);
   }
-  var files = unifiedFolderFilesCache[folderId] || [];
+  // Load subfolders if not cached
+  if (!unifiedSubfoldersCache[folderId]) {
+    await loadUnifiedSubfolders(folderId);
+  }
+
+  var allFiles = unifiedFolderFilesCache[folderId] || [];
+  var subfolders = unifiedSubfoldersCache[folderId] || [];
   var uf = unifiedFolders.find(function(f) { return f.id === folderId; });
   var isCreator = currentUser && uf && currentUser.uid === uf.creatorUid;
   grid.classList.toggle('list-view', filesView === 'list');
-  if (!files.length) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128194;</div><p>No files in this unified folder yet.<br>Move files here from the My Files tab.</p></div>';
+
+  function _renderFileCard(file) {
+    var ts = file.created ? new Date(file.created).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) : '';
+    var size = file.content ? (file.content.length >= 1024 ? (file.content.length / 1024).toFixed(1) + ' KB' : file.content.length + ' B') : '';
+    var isUploader = currentUser && file.uploaderUid === currentUser.uid;
+    var locked = file.locked !== false;
+    var lockIcon = isUploader
+      ? ' <span class="uf-lock-badge" style="color:var(--green);" title="' + (locked ? 'Your file — locked (others cannot edit). Right-click to unlock.' : 'Your file — unlocked (others can edit). Right-click to lock.') + '">' + (locked ? '&#128275;' : '&#128274;') + '</span>'
+      : (locked ? ' <span class="uf-lock-badge" title="Locked by uploader — read only">&#128274;</span>' : '');
+    var sel = selectedUnifiedFiles.has(file.id);
+    return '<div class="file-card file-doc' + (sel ? ' selected' : '') + '" id="fc-uf-' + file.id + '"' +
+      ' onclick="openUnifiedFileForEdit(\'' + folderId + '\',\'' + file.id + '\')"' +
+      ' oncontextmenu="showUFFileCtx(event,\'' + folderId + '\',\'' + file.id + '\')"' +
+      ' ontouchstart="ufFileTouchStart(event,\'' + folderId + '\',\'' + file.id + '\')"' +
+      ' ontouchend="fcTouchEnd(event)" ontouchmove="fcTouchMove()">' +
+      '<div class="file-check" onclick="toggleUFFileSelect(event,\'' + file.id + '\')" style="position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:4px;border:2px solid var(--border);background:' + (sel ? 'var(--accent)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;font-size:11px;color:#fff;">' + (sel ? '&#10003;' : '') + '</div>' +
+      '<div class="file-icon">&#128196;</div>' +
+      '<div class="file-name">' + escH(file.name) + lockIcon + '</div>' +
+      '<div class="file-meta">' + escH(file.uploaderEmail || '') + (ts ? ' &bull; ' + ts : '') + (size ? ' &bull; ' + size : '') + '</div>' +
+      '</div>';
+  }
+
+  var html = '';
+
+  if (currentUFSubfolderId !== null) {
+    // --- Inside a subfolder: show only files belonging to this subfolder ---
+    var subFiles = allFiles.filter(function(f) { return (f.parentSubfolderId || null) === currentUFSubfolderId; });
+    if (!subFiles.length) {
+      html = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128194;</div><p>No files in this subfolder yet.<br>Move files here from My Files.</p></div>';
+    } else {
+      html = subFiles.map(_renderFileCard).join('');
+    }
   } else {
-    grid.innerHTML = files.map(function(file) {
-      var ts = file.created ? new Date(file.created).toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) : '';
-      var size = file.content ? (file.content.length >= 1024 ? (file.content.length / 1024).toFixed(1) + ' KB' : file.content.length + ' B') : '';
-      var isUploader = currentUser && file.uploaderUid === currentUser.uid;
-      var locked = file.locked !== false;
-      var lockIcon = isUploader
-        ? ' <span class="uf-lock-badge" style="color:var(--green);" title="' + (locked ? 'Your file — locked (others cannot edit). Right-click to unlock.' : 'Your file — unlocked (others can edit). Right-click to lock.') + '">' + (locked ? '&#128275;' : '&#128274;') + '</span>'
-        : (locked ? ' <span class="uf-lock-badge" title="Locked by uploader — read only">&#128274;</span>' : '');
-      var sel = selectedUnifiedFiles.has(file.id);
-      return '<div class="file-card file-doc' + (sel ? ' selected' : '') + '" id="fc-uf-' + file.id + '"' +
-        ' onclick="openUnifiedFileForEdit(\'' + folderId + '\',\'' + file.id + '\')"' +
-        ' oncontextmenu="showUFFileCtx(event,\'' + folderId + '\',\'' + file.id + '\')"' +
-        ' ontouchstart="ufFileTouchStart(event,\'' + folderId + '\',\'' + file.id + '\')"' +
+    // --- UF root: show subfolders first, then files at root (no parentSubfolderId) ---
+    var rootFiles = allFiles.filter(function(f) { return !f.parentSubfolderId; });
+
+    // Subfolder cards
+    subfolders.forEach(function(sub) {
+      var fileCount = allFiles.filter(function(f) { return (f.parentSubfolderId || null) === sub.id; }).length;
+      html += '<div class="file-card file-folder" id="fc-ufsub-' + sub.id + '"' +
+        ' onclick="enterUFSubfolder(\'' + sub.id + '\')"' +
+        ' oncontextmenu="showUFSubfolderCtx(event,\'' + folderId + '\',\'' + sub.id + '\')"' +
+        ' ontouchstart="ufSubTouchStart(event,\'' + folderId + '\',\'' + sub.id + '\')"' +
         ' ontouchend="fcTouchEnd(event)" ontouchmove="fcTouchMove()">' +
-        '<div class="file-check" onclick="toggleUFFileSelect(event,\'' + file.id + '\')" style="position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:4px;border:2px solid var(--border);background:' + (sel ? 'var(--accent)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;font-size:11px;color:#fff;">' + (sel ? '&#10003;' : '') + '</div>' +
-        '<div class="file-icon">&#128196;</div>' +
-        '<div class="file-name">' + escH(file.name) + lockIcon + '</div>' +
-        '<div class="file-meta">' + escH(file.uploaderEmail || '') + (ts ? ' &bull; ' + ts : '') + (size ? ' &bull; ' + size : '') + '</div>' +
+        '<div class="file-icon">&#128193;</div>' +
+        '<div class="file-name">' + escH(sub.name) + '</div>' +
+        '<div class="file-meta">' + fileCount + ' file' + (fileCount !== 1 ? 's' : '') + '</div>' +
         '</div>';
-    }).join('');
+    });
+
+    // Root-level files
+    if (rootFiles.length) {
+      html += rootFiles.map(_renderFileCard).join('');
+    } else if (!subfolders.length) {
+      html = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128194;</div><p>No files in this unified folder yet.<br>Move files here from the My Files tab.</p></div>';
+    }
   }
-  // Creator/admin action bar
-  var extraBtns = '<button class="btn btn-download btn-sm" onclick="downloadUnifiedFolder(\'' + folderId + '\')">&#11015; Download ZIP</button>';
-  if (isCreator) {
-    extraBtns += '<button class="btn btn-ghost btn-sm" onclick="showUnifiedFolderReport(\'' + folderId + '\')">&#128202; Contributor Report</button>';
-    extraBtns += '<button class="btn btn-ghost btn-sm" onclick="changeUnifiedFolderPassword(\'' + folderId + '\')">&#128272; Change Password</button>';
-    extraBtns += '<button class="btn btn-danger btn-sm" onclick="deleteUnifiedFolder(\'' + folderId + '\')">&#128465; Delete Folder</button>';
-  } else if (isAdminAccount) {
-    extraBtns += '<button class="btn btn-ghost btn-sm" onclick="adminResetUnifiedFolderPassword(\'' + folderId + '\')">&#128272; Reset Password (Admin)</button>';
+
+  grid.innerHTML = html;
+
+  // Creator/admin action bar (only at root level)
+  if (currentUFSubfolderId === null) {
+    var extraBtns = '<button class="btn btn-download btn-sm" onclick="downloadUnifiedFolder(\'' + folderId + '\')">&#11015; Download ZIP</button>';
+    if (isCreator) {
+      extraBtns += '<button class="btn btn-ghost btn-sm" onclick="showUnifiedFolderReport(\'' + folderId + '\')">&#128202; Contributor Report</button>';
+      extraBtns += '<button class="btn btn-ghost btn-sm" onclick="changeUnifiedFolderPassword(\'' + folderId + '\')">&#128272; Change Password</button>';
+      extraBtns += '<button class="btn btn-danger btn-sm" onclick="deleteUnifiedFolder(\'' + folderId + '\')">&#128465; Delete Folder</button>';
+    } else if (isAdminAccount) {
+      extraBtns += '<button class="btn btn-ghost btn-sm" onclick="adminResetUnifiedFolderPassword(\'' + folderId + '\')">&#128272; Reset Password (Admin)</button>';
+    }
+    grid.innerHTML += '<div style="grid-column:1/-1;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">' + extraBtns + '</div>';
   }
-  grid.innerHTML += '<div style="grid-column:1/-1;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">' + extraBtns + '</div>';
+  updateSelActionBar();
 }
 
 function openUnifiedFileForEdit(folderId, fileId) {
@@ -3353,8 +3588,53 @@ window._filterUFItems = function() {
 
 async function _doMoveToUnified(sel, folderId, uf) {
   if (!window.FB || !window.FB.addFileToSharedFolder) { toast('Not connected to server', 'error'); return; }
-  // ensure UF files are loaded so we can check for duplicate names
+  // ensure files and subfolders are loaded
   if (!unifiedFolderFilesCache[folderId]) await loadUnifiedFolderFiles(folderId);
+  if (!unifiedSubfoldersCache[folderId]) await loadUnifiedSubfolders(folderId);
+  var subfolders = unifiedSubfoldersCache[folderId] || [];
+  if (subfolders.length > 0) {
+    _showUFSubfolderDestPicker(sel, folderId, uf, subfolders);
+  } else {
+    await _executeUFFilesMove(sel, folderId, null, uf);
+  }
+}
+
+function _showUFSubfolderDestPicker(sel, folderId, uf, subfolders) {
+  var html = '<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">';
+  html += '<div style="padding:8px 12px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.3);border-radius:8px;font-size:0.8rem;color:var(--accent);">Choose where to save in <strong>' + escH(uf.name) + '</strong>:</div>';
+  // Option: folder root
+  html += '<div id="ufsub-dest-root" class="ufsub-dest-opt" onclick="window._selectUFSubdest(this, null)"' +
+    ' style="padding:9px 12px;border-radius:8px;cursor:pointer;font-size:0.8rem;border:2px solid var(--accent);background:rgba(0,212,255,0.07);color:var(--text);display:flex;align-items:center;gap:8px;">' +
+    '&#127760; Folder root (no subfolder)</div>';
+  // Options: subfolders
+  subfolders.forEach(function(sub) {
+    html += '<div id="ufsub-dest-' + sub.id + '" class="ufsub-dest-opt" onclick="window._selectUFSubdest(this, \'' + sub.id + '\')"' +
+      ' style="padding:9px 12px;border-radius:8px;cursor:pointer;font-size:0.8rem;border:1px solid var(--border);background:var(--surface2);color:var(--text2);display:flex;align-items:center;gap:8px;">' +
+      '&#128193; ' + escH(sub.name) + '</div>';
+  });
+  html += '</div>';
+  window._ufMoveSubdest = null;
+  showRawModal('Move to Unified Folder', 'Select destination in "' + escH(uf.name) + '":', html, [
+    { label: 'Move Here', cls: 'btn-primary', cb: function() {
+      closeModal();
+      _executeUFFilesMove(sel, folderId, window._ufMoveSubdest, uf);
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+
+window._selectUFSubdest = function(el, subfolderId) {
+  document.querySelectorAll('.ufsub-dest-opt').forEach(function(x) {
+    x.style.borderColor = 'var(--border)'; x.style.borderWidth = '1px';
+    x.style.background = 'var(--surface2)'; x.style.color = 'var(--text2)';
+  });
+  el.style.borderColor = 'var(--accent)'; el.style.borderWidth = '2px';
+  el.style.background = 'rgba(0,212,255,0.07)'; el.style.color = 'var(--text)';
+  window._ufMoveSubdest = subfolderId;
+};
+
+async function _executeUFFilesMove(sel, folderId, parentSubfolderId, uf) {
+  if (!window.FB || !window.FB.addFileToSharedFolder) { toast('Not connected to server', 'error'); return; }
   var ufFiles = unifiedFolderFilesCache[folderId] || [];
   var usedNames = ufFiles.map(function(f) { return f.name; });
   var moved = 0;
@@ -3376,7 +3656,8 @@ async function _doMoveToUnified(sel, folderId, uf) {
       await window.FB.addFileToSharedFolder(folderId, {
         name: targetName, content: node.content || '',
         uploaderUid: currentUser.uid, uploaderEmail: currentUser.email,
-        uploaderName: (currentProfile && currentProfile.displayName) || currentUser.email
+        uploaderName: (currentProfile && currentProfile.displayName) || currentUser.email,
+        parentSubfolderId: parentSubfolderId || null
       });
       removeFromParent(fsRoot, sel[i]);
       moved++;
@@ -4276,7 +4557,7 @@ async function appOnLogin(user, profile) {
 
   purgeExpiredBin(); updateBinCount(); applySettings(); updateStats(); updatePreview(); renderOverview();
   // Reset files tab DOM to My Files (fixes stale Unified Folders tab after logout)
-  filesTab = 'myfiles'; currentUnifiedFolderId = null;
+  filesTab = 'myfiles'; currentUnifiedFolderId = null; currentUFSubfolderId = null; unifiedSubfoldersCache = {};
   var _tf = document.getElementById('tabMyFiles'); if (_tf) _tf.classList.add('active');
   var _tu = document.getElementById('tabUnified'); if (_tu) _tu.classList.remove('active');
   // Load unified folders then render files page
@@ -4295,7 +4576,7 @@ function appOnLogout() {
   rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
   fsRoot = { name:'root', type:'folder', children:[], id:'root' }; curFolderId = 'root';
   recycleBin = []; courseDict = {}; adminUsersCache = []; adminActivityCache = [];
-  unifiedFolders = []; unifiedFolderFilesCache = {}; currentUnifiedFolderId = null; filesTab = 'myfiles';
+  unifiedFolders = []; unifiedFolderFilesCache = {}; unifiedSubfoldersCache = {}; currentUnifiedFolderId = null; currentUFSubfolderId = null; filesTab = 'myfiles';
   ['courseCode','courseTitle','examPrefix','numScripts','matricPrefix'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   try { renderTable(); updateStats(); } catch (e) {}
   document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = 'none'; });
@@ -4719,6 +5000,7 @@ if (!CONFIGURED) {
           uploaderUid: x.uploaderUid || '', uploaderEmail: x.uploaderEmail || '',
           uploaderName: x.uploaderName || '',
           locked: x.locked !== false,
+          parentSubfolderId: x.parentSubfolderId || null,
           created: x.created && x.created.toMillis ? x.created.toMillis() : null
         });
       });
@@ -4733,6 +5015,7 @@ if (!CONFIGURED) {
         uploaderEmail: fileData.uploaderEmail || '',
         uploaderName: fileData.uploaderName || '',
         locked: true,
+        parentSubfolderId: fileData.parentSubfolderId || null,
         created: serverTimestamp()
       });
       await setDoc(doc(db, 'sharedFolders', folderId), { modified: serverTimestamp() }, { merge: true });
@@ -4784,11 +5067,43 @@ if (!CONFIGURED) {
       setDoc(doc(db, 'sharedFolders', folderId, 'files', fileId), { content: content }, { merge: true }),
     deleteSharedFolderFileHard: (folderId, fileId) =>
       deleteDoc(doc(db, 'sharedFolders', folderId, 'files', fileId)),
+    async createUnifiedSubfolder(folderId, name, creatorUid, creatorEmail) {
+      const ref = await addDoc(collection(db, 'sharedFolders', folderId, 'subfolders'), {
+        name: name || 'Unnamed Folder', creatorUid: creatorUid || '', creatorEmail: creatorEmail || '',
+        created: serverTimestamp()
+      });
+      return ref.id;
+    },
+    async listUnifiedSubfolders(folderId) {
+      const snap = await getDocs(collection(db, 'sharedFolders', folderId, 'subfolders'));
+      const out = [];
+      snap.forEach(d => {
+        const x = d.data();
+        out.push({ id: d.id, name: x.name || 'Unnamed', creatorUid: x.creatorUid || '',
+          creatorEmail: x.creatorEmail || '', created: x.created?.toMillis?.() ?? null });
+      });
+      out.sort((a, b) => a.name.localeCompare(b.name));
+      return out;
+    },
+    async deleteUnifiedSubfolder(folderId, subfolderId) {
+      const fileSnap = await getDocs(collection(db, 'sharedFolders', folderId, 'files'));
+      const batch = writeBatch(db);
+      fileSnap.forEach(d => {
+        if ((d.data().parentSubfolderId || null) === subfolderId)
+          batch.set(d.ref, { parentSubfolderId: null }, { merge: true });
+      });
+      await batch.commit();
+      await deleteDoc(doc(db, 'sharedFolders', folderId, 'subfolders', subfolderId));
+    },
+    renameUnifiedSubfolder: (folderId, subfolderId, newName) =>
+      setDoc(doc(db, 'sharedFolders', folderId, 'subfolders', subfolderId), { name: newName }, { merge: true }),
     async deleteSharedFolder(folderId) {
       const sub = await getDocs(collection(db, 'sharedFolders', folderId, 'files'));
       const dels = []; sub.forEach(d => dels.push(deleteDoc(d.ref)));
       const dSub = await getDocs(collection(db, 'sharedFolders', folderId, 'deletedFiles'));
       dSub.forEach(d => dels.push(deleteDoc(d.ref)));
+      const sSub = await getDocs(collection(db, 'sharedFolders', folderId, 'subfolders'));
+      sSub.forEach(d => dels.push(deleteDoc(d.ref)));
       if (dels.length) await Promise.all(dels);
       await deleteDoc(doc(db, 'sharedFolders', folderId));
     }
