@@ -766,8 +766,8 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       </div>
       <button class="btn btn-ghost btn-sm" id="selAllBtn" onclick="toggleSelectAll()">&#9745; All</button>
       <button class="btn btn-ghost btn-sm" id="createFolderBtn" onclick="createFolder()">+ Folder</button>
-      <button class="btn btn-ghost btn-sm" id="createUnifiedFolderBtn" onclick="createUnifiedFolder()" style="display:none;">+ Unified</button>
-      <button class="btn btn-ghost btn-sm" id="createUFSubfolderBtn" onclick="createUFSubfolder()" style="display:none;">+ Folder</button>
+      <button class="btn btn-orange btn-sm" id="createUnifiedFolderBtn" onclick="createUnifiedFolder()" style="display:none;">+ Unified</button>
+      <button class="btn btn-orange btn-sm" id="createUFSubfolderBtn" onclick="createUFSubfolder()" style="display:none;">+ Folder</button>
       <button class="btn btn-import btn-sm" id="importFileBtn" onclick="importFile()">&#11014; Import CSV</button>
       <button class="btn btn-download btn-sm" onclick="downloadSelected()">&#11015; Download</button>
       <button class="btn btn-danger btn-sm" onclick="deleteSelected()">&#128465; Delete</button>
@@ -3000,16 +3000,20 @@ function exitUFSubfolder() {
 function createUFSubfolder() {
   if (!currentUnifiedFolderId) return;
   var folderId = currentUnifiedFolderId;
-  showModal('New Subfolder', 'Enter subfolder name:', 'text', '', function(name) {
-    name = (name || '').trim();
-    if (!name) { toast('Please enter a name', 'warn'); return; }
-    if (!window.FB || !window.FB.createUnifiedSubfolder) { toast('Not connected to server', 'error'); return; }
-    window.FB.createUnifiedSubfolder(folderId, name, currentUser.uid, currentUser.email).then(function() {
-      delete unifiedSubfoldersCache[folderId];
-      renderFilesPage();
-      toast('Subfolder "' + name + '" created', 'success');
-    }).catch(function(e) { toast('Could not create subfolder: ' + (e && e.message ? e.message : 'error'), 'error'); });
-  });
+  showModal('New Subfolder', 'Enter subfolder name:', { type: 'text', placeholder: 'Subfolder name' }, [
+    { label: 'Create', cls: 'btn-primary', cb: function() {
+      var name = (document.getElementById('modalTextInput').value || '').trim();
+      if (!name) { toast('Please enter a name', 'warn'); return; }
+      if (!window.FB || !window.FB.createUnifiedSubfolder) { toast('Not connected to server', 'error'); return; }
+      closeModal();
+      window.FB.createUnifiedSubfolder(folderId, name, currentUser.uid, currentUser.email).then(function() {
+        delete unifiedSubfoldersCache[folderId];
+        renderFilesPage();
+        toast('Subfolder "' + name + '" created', 'success');
+      }).catch(function(e) { toast('Could not create subfolder: ' + (e && e.message ? e.message : 'error'), 'error'); });
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
 }
 
 var _ufSubCtxFolderId = null;
@@ -3045,18 +3049,22 @@ function ufSubCtxRename() {
   if (!folderId || !subfolderId) return;
   var cached = unifiedSubfoldersCache[folderId] || [];
   var sub = cached.find(function(s) { return s.id === subfolderId; });
-  showModal('Rename Subfolder', 'Enter new name:', 'text', sub ? sub.name : '', function(name) {
-    name = (name || '').trim();
-    if (!name) { toast('Please enter a name', 'warn'); return; }
-    if (!window.FB || !window.FB.renameUnifiedSubfolder) { toast('Not connected to server', 'error'); return; }
-    window.FB.renameUnifiedSubfolder(folderId, subfolderId, name).then(function() {
-      var arr = unifiedSubfoldersCache[folderId] || [];
-      var s = arr.find(function(x) { return x.id === subfolderId; });
-      if (s) s.name = name;
-      renderFilesPage();
-      toast('Subfolder renamed to "' + name + '"', 'success');
-    }).catch(function(e) { toast('Could not rename: ' + (e && e.message ? e.message : 'error'), 'error'); });
-  });
+  showModal('Rename Subfolder', 'Enter new name:', { type: 'text', placeholder: 'New name', value: sub ? sub.name : '' }, [
+    { label: 'Rename', cls: 'btn-primary', cb: function() {
+      var name = (document.getElementById('modalTextInput').value || '').trim();
+      if (!name) { toast('Please enter a name', 'warn'); return; }
+      if (!window.FB || !window.FB.renameUnifiedSubfolder) { toast('Not connected to server', 'error'); return; }
+      closeModal();
+      window.FB.renameUnifiedSubfolder(folderId, subfolderId, name).then(function() {
+        var arr = unifiedSubfoldersCache[folderId] || [];
+        var s = arr.find(function(x) { return x.id === subfolderId; });
+        if (s) s.name = name;
+        renderFilesPage();
+        toast('Subfolder renamed to "' + name + '"', 'success');
+      }).catch(function(e) { toast('Could not rename: ' + (e && e.message ? e.message : 'error'), 'error'); });
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
 }
 
 function ufSubCtxDelete() {
