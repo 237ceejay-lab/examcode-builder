@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ExamCode Builder — UBa</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#070a12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ExamCode">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
 :root {
   --bg:#070a12;--surface:#0d1120;--surface2:#131829;--surface3:#1a2038;--surface4:#212849;
@@ -623,6 +630,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
   </div>
   <div class="nav-right">
     <div class="save-badge"><div class="save-dot"></div><span id="save-label">Synced</span></div>
+    <button id="installBtn" class="btn btn-ghost btn-sm" style="display:none;font-size:0.72rem;" onclick="triggerInstall()" title="Install ExamCode as an app">&#128242; Install</button>
     <div class="nav-user">
       <div class="user-chip">
         <div class="user-avatar" id="userAvatar">?</div>
@@ -838,6 +846,14 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <div id="dictList" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;"></div>
       <button class="btn btn-primary btn-sm btn-full" style="margin-top:4px" onclick="addDictEntry()">+ Add Entry</button>
       <button class="btn btn-ghost btn-sm btn-full" style="margin-top:4px" onclick="clearDictionary()">&#128465; Clear Dictionary</button>
+    </div>
+    <div class="set-card" id="pwaInstallCard">
+      <div class="set-title">Install App</div>
+      <div class="set-row">
+        <div><div class="set-label">Add to Home Screen</div><div class="set-desc">Install ExamCode as a standalone app on your device</div></div>
+        <button class="btn btn-primary btn-sm" id="settingsInstallBtn" onclick="triggerInstall()">Install</button>
+      </div>
+      <div id="iosInstallHint" style="display:none;font-size:0.74rem;color:var(--text2);line-height:1.6;background:var(--surface2);border-radius:8px;padding:10px 12px;border:1px solid var(--border);margin-top:6px;">In Safari, tap the <strong>Share</strong> button at the bottom of the screen, then select <strong>&ldquo;Add to Home Screen&rdquo;</strong>.</div>
     </div>
     <div class="set-card admin-only" style="display:none;">
       <div class="set-title">Danger Zone</div>
@@ -1095,7 +1111,7 @@ function switchPage(name) {
   var bt = document.getElementById('bt-' + name);
   if (bt) bt.classList.add('active');
   if (name === 'files') renderFilesPage();
-  if (name === 'settings') renderDictList();
+  if (name === 'settings') { renderDictList(); if (typeof updatePWAInstallCard === 'function') updatePWAInstallCard(); }
   if (name === 'overview') renderOverview();
   if (name === 'admin') renderAdmin();
 }
@@ -4924,6 +4940,101 @@ function showRawModal(title, bodyText, inputHtml, actions) {
   ma.innerHTML = actions.map(function(a, i) { return '<button class="btn ' + a.cls + '" id="mab' + i + '">' + a.label + '</button>'; }).join('');
   actions.forEach(function(a, i) { document.getElementById('mab' + i).onclick = a.cb; });
   document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ─── PWA / INSTALL ────────────────────────────────────────────────────────────
+var _pwaPrompt = null;
+var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+var _isStandalone = window.navigator.standalone === true ||
+                    window.matchMedia('(display-mode: standalone)').matches;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _pwaPrompt = e;
+  var btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = '';
+});
+
+window.addEventListener('appinstalled', function() {
+  _pwaPrompt = null;
+  var btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'none';
+  if (typeof toast === 'function') toast('ExamCode installed!', 'success');
+});
+
+function triggerInstall() {
+  if (_isStandalone) { if (typeof toast === 'function') toast('App is already installed', 'success'); return; }
+  if (_pwaPrompt) {
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function(r) {
+      if (r.outcome === 'accepted') {
+        _pwaPrompt = null;
+        var btn = document.getElementById('installBtn');
+        if (btn) btn.style.display = 'none';
+      }
+    });
+  } else if (_isIOS) {
+    var hint = document.getElementById('iosInstallHint');
+    if (hint) hint.style.display = hint.style.display === 'none' ? '' : 'none';
+  } else {
+    if (typeof toast === 'function') toast('Open in Chrome or Edge to install this app', 'warn');
+  }
+}
+
+function updatePWAInstallCard() {
+  var card = document.getElementById('pwaInstallCard');
+  var sbtn = document.getElementById('settingsInstallBtn');
+  var hint = document.getElementById('iosInstallHint');
+  if (!card) return;
+  if (_isStandalone) {
+    card.innerHTML =
+      '<div class="set-title">Install App</div>' +
+      '<div class="set-row"><div><div class="set-label" style="color:var(--green)">&#10003; Running as installed app</div>' +
+      '<div class="set-desc">ExamCode is installed on this device</div></div></div>';
+    return;
+  }
+  if (_isIOS) {
+    if (hint) hint.style.display = '';
+    if (sbtn) { sbtn.textContent = 'Show instructions'; sbtn.className = 'btn btn-ghost btn-sm'; }
+  } else if (!_pwaPrompt && sbtn) {
+    sbtn.disabled = true;
+    sbtn.title = 'Open in Chrome or Edge to enable install';
+  }
+}
+
+// Generate a PNG apple-touch-icon for iOS (canvas-based)
+(function() {
+  try {
+    var s = 180, cv = document.createElement('canvas');
+    cv.width = s; cv.height = s;
+    var c = cv.getContext('2d');
+    c.fillStyle = '#070a12'; c.fillRect(0, 0, s, s);
+    var rx = 28, px = 10, py = 10, pw = s - 20, ph = s - 20;
+    c.beginPath();
+    c.moveTo(px + rx, py); c.lineTo(px + pw - rx, py); c.quadraticCurveTo(px + pw, py, px + pw, py + rx);
+    c.lineTo(px + pw, py + ph - rx); c.quadraticCurveTo(px + pw, py + ph, px + pw - rx, py + ph);
+    c.lineTo(px + rx, py + ph); c.quadraticCurveTo(px, py + ph, px, py + ph - rx);
+    c.lineTo(px, py + rx); c.quadraticCurveTo(px, py, px + rx, py);
+    c.closePath();
+    c.fillStyle = '#0d1120'; c.fill();
+    c.strokeStyle = '#00d4ff'; c.lineWidth = 4; c.stroke();
+    c.fillStyle = '#00d4ff'; c.font = 'bold 72px Arial,sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('EC', s / 2, s * 0.44);
+    c.fillStyle = '#7b61ff'; c.font = 'bold 30px Arial,sans-serif';
+    c.fillText('UBa', s / 2, s * 0.74);
+    var lnk = document.createElement('link');
+    lnk.rel = 'apple-touch-icon'; lnk.sizes = '180x180';
+    lnk.href = cv.toDataURL('image/png');
+    document.head.appendChild(lnk);
+  } catch (e) {}
+})();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function() {});
+  });
 }
 </script>
 
