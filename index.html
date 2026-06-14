@@ -820,6 +820,13 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       </div>
     </div>
     <div class="set-card">
+      <div class="set-title">Matricule</div>
+      <div class="set-row">
+        <div><div class="set-label">Expected matricule length</div><div class="set-desc">Used to warn about short or long matricules on Done</div></div>
+        <input type="number" class="finput" id="set-matriculeLength" min="1" max="30" value="10" style="width:70px;text-align:center;" onchange="saveSetting()">
+      </div>
+    </div>
+    <div class="set-card">
       <div class="set-title">Auto-Save</div>
       <div class="set-row">
         <div><div class="set-label">Auto-save enabled</div><div class="set-desc">Save every 30s to recover from shutdowns</div></div>
@@ -1012,7 +1019,7 @@ var lastFinalTranscript = '';
 var lastProcessedResultIndex = -1;
 
 var courseDict = {};
-var settings = { autoAdvance:true, autoPrefix:true, autosave:true };
+var settings = { autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10 };
 
 var idCtr = Date.now();
 function genId() { return 'i' + (++idCtr); }
@@ -1148,7 +1155,7 @@ function applyLoadedState(d) {
     if (d.courseDict) courseDict = d.courseDict;
     if (d.fsRoot) fsRoot = d.fsRoot;
     if (d.recycleBin) recycleBin = d.recycleBin;
-    if (d.settings) settings = Object.assign({ autoAdvance:true, autoPrefix:true, autosave:true }, d.settings);
+    if (d.settings) settings = Object.assign({ autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10 }, d.settings);
     if (d.setup) {
       var s = d.setup;
       if (s.courseCode) document.getElementById('courseCode').value = s.courseCode;
@@ -1645,12 +1652,13 @@ function _checkBlanks() {
 }
 
 function _checkShortMatricules() {
-  var shortOnes = rows.filter(function(r) { return r.matricule && r.matricule.trim().length > 0 && r.matricule.trim().length < 10; });
+  var mLen = settings.matriculeLength || 10;
+  var shortOnes = rows.filter(function(r) { return r.matricule && r.matricule.trim().length > 0 && r.matricule.trim().length < mLen; });
   if (shortOnes.length > 0) {
     var examples = shortOnes.slice(0, 3).map(function(r) { return r.examCode + ': "' + r.matricule + '"'; }).join('\n');
     showModal(
       'Short Matricule Warning',
-      shortOnes.length + ' matricule(s) are shorter than 10 characters.\n\nExamples:\n' + examples + '\n\nReview them or continue anyway?',
+      shortOnes.length + ' matricule(s) are shorter than ' + mLen + ' characters.\n\nExamples:\n' + examples + '\n\nReview them or continue anyway?',
       null,
       [
         { label: 'Review (go back)', cls: 'btn-danger', cb: closeModal },
@@ -1663,12 +1671,13 @@ function _checkShortMatricules() {
 }
 
 function _checkLongMatricules() {
-  var longOnes = rows.filter(function(r) { return r.matricule && r.matricule.trim().length > 10; });
+  var mLen = settings.matriculeLength || 10;
+  var longOnes = rows.filter(function(r) { return r.matricule && r.matricule.trim().length > mLen; });
   if (longOnes.length > 0) {
     var examples = longOnes.slice(0, 3).map(function(r) { return r.examCode + ': "' + r.matricule + '"'; }).join('\n');
     showModal(
       'Matricule Length Warning',
-      longOnes.length + ' matricule(s) are longer than 10 characters.\n\nExamples:\n' + examples + '\n\nReview them or continue?',
+      longOnes.length + ' matricule(s) are longer than ' + mLen + ' characters.\n\nExamples:\n' + examples + '\n\nReview them or continue?',
       null,
       [
         { label: 'Review (go back)', cls: 'btn-danger', cb: closeModal },
@@ -4241,12 +4250,15 @@ function applySettings() {
   document.getElementById('set-autoAdvance').checked = settings.autoAdvance;
   document.getElementById('set-autoPrefix').checked = settings.autoPrefix;
   document.getElementById('set-autosave').checked = settings.autosave;
+  document.getElementById('set-matriculeLength').value = settings.matriculeLength || 10;
 }
 
 function saveSetting() {
   settings.autoAdvance = document.getElementById('set-autoAdvance').checked;
   settings.autoPrefix = document.getElementById('set-autoPrefix').checked;
   settings.autosave = document.getElementById('set-autosave').checked;
+  var ml = parseInt(document.getElementById('set-matriculeLength').value, 10);
+  settings.matriculeLength = (isNaN(ml) || ml < 1) ? 10 : ml;
   saveToStorage();
 }
 
