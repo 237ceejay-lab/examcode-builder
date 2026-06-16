@@ -1110,6 +1110,7 @@ function switchPage(name) {
   document.querySelectorAll('.bnav-tab').forEach(function(t) { t.classList.remove('active'); });
   var bt = document.getElementById('bt-' + name);
   if (bt) bt.classList.add('active');
+  if (name !== 'builder') { if (typeof _releaseMatricWakeLock === 'function') _releaseMatricWakeLock(); }
   if (name === 'files') renderFilesPage();
   if (name === 'settings') { renderDictList(); if (typeof updatePWAInstallCard === 'function') updatePWAInstallCard(); }
   if (name === 'overview') renderOverview();
@@ -1360,6 +1361,7 @@ function focusRow(id) {
 }
 
 function onMatricFocus(id) {
+  _onMatricActive();
   activeRowId = id;
   document.querySelectorAll('tr.active-row').forEach(function(t) { t.classList.remove('active-row'); });
   var tr = document.getElementById('tr-' + id);
@@ -1382,6 +1384,7 @@ function onMatricFocus(id) {
 }
 
 function onMatricInput(id, val) {
+  _onMatricActive();
   var r = rows.find(function(x) { return x.id === id; });
   if (!r) return;
   r.matricule = val;
@@ -5029,6 +5032,41 @@ function updatePWAInstallCard() {
     document.head.appendChild(lnk);
   } catch (e) {}
 })();
+
+// ─── SCREEN WAKE LOCK (matricule input only) ──────────────────────────────────
+var _matricWakeLock = null;
+var _matricWakeLockTimer = null;
+var MATRIC_WAKE_TIMEOUT = 10 * 60 * 1000; // 10 minutes of inactivity
+
+function _acquireMatricWakeLock() {
+  if (!('wakeLock' in navigator) || _matricWakeLock) return;
+  navigator.wakeLock.request('screen').then(function(lock) {
+    _matricWakeLock = lock;
+    lock.addEventListener('release', function() { _matricWakeLock = null; });
+  }).catch(function() {});
+}
+
+function _releaseMatricWakeLock() {
+  clearTimeout(_matricWakeLockTimer);
+  _matricWakeLockTimer = null;
+  if (_matricWakeLock) {
+    _matricWakeLock.release().catch(function() {});
+    _matricWakeLock = null;
+  }
+}
+
+function _onMatricActive() {
+  _acquireMatricWakeLock();
+  clearTimeout(_matricWakeLockTimer);
+  _matricWakeLockTimer = setTimeout(_releaseMatricWakeLock, MATRIC_WAKE_TIMEOUT);
+}
+
+// If the OS releases the lock on visibility change, re-acquire while the timer is still running
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && _matricWakeLockTimer) {
+    _acquireMatricWakeLock();
+  }
+});
 
 // Register service worker
 if ('serviceWorker' in navigator) {
