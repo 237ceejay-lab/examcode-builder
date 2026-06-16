@@ -131,6 +131,8 @@ tr:hover td{background:var(--surface);}
 tr.active-row td{background:var(--surface3)!important;box-shadow:inset 2px 0 0 var(--accent);}
 tr.duplicate td{background:var(--dupe-bg)!important;border-bottom:1px solid var(--dupe-border);}
 tr.duplicate .exam-code-cell{color:var(--dupe)!important;}
+tr.wrong-length td{background:rgba(255,140,0,0.12)!important;border-bottom:1px solid rgba(255,140,0,0.25);}
+tr.wrong-length .matric-input{color:#ff9a2e!important;}
 .row-num{font-family:var(--mono);font-size:0.68rem;color:var(--text3);text-align:center;}
 .exam-code-cell{font-family:var(--mono);font-weight:700;color:var(--accent3);font-size:0.8rem;}
 .dupe-badge{display:inline-block;font-size:0.6rem;font-weight:700;background:var(--dupe);color:#000;padding:1px 5px;border-radius:4px;margin-left:4px;vertical-align:middle;}
@@ -553,6 +555,44 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
 /* ─── UNIFIED FOLDER REPORT ROWS ─── */
 .uf-report-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.8rem;}
 .uf-report-row:last-child{border-bottom:none;}
+
+/* ─── MANUAL PAGE ─── */
+#page-manual{flex-direction:column;overflow-y:auto;}
+.manual-body{padding:20px;display:flex;flex-direction:column;gap:20px;max-width:680px;width:100%;margin:0 auto;padding-bottom:40px;}
+.man-hero{background:linear-gradient(135deg,var(--surface2) 0%,var(--surface) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;text-align:center;}
+.man-hero-title{font-size:1.35rem;font-weight:800;color:var(--text);margin-bottom:6px;}
+.man-hero-title span{color:var(--accent);}
+.man-hero-sub{font-size:0.8rem;color:var(--text2);line-height:1.6;}
+.man-toc{display:flex;flex-wrap:wrap;gap:7px;}
+.man-toc-btn{font-size:0.71rem;padding:4px 11px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--accent);cursor:pointer;transition:background .15s;}
+.man-toc-btn:hover{background:var(--surface3);}
+.man-section-head{font-size:0.58rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:6px;margin-top:4px;}
+.man-section-head::after{content:'';flex:1;height:1px;background:var(--border);}
+.man-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:10px;}
+.man-card-title{font-size:0.83rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px;}
+.man-p{font-size:0.8rem;color:var(--text2);line-height:1.68;}
+.man-p strong{color:var(--text);}
+.man-steps{display:flex;flex-direction:column;gap:9px;}
+.man-step{display:flex;gap:10px;align-items:flex-start;}
+.man-num{min-width:22px;height:22px;border-radius:50%;background:var(--accent);color:#000;font-size:0.64rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.man-step-body{font-size:0.8rem;color:var(--text2);line-height:1.65;}
+.man-step-body strong{color:var(--text);}
+.man-tip{background:rgba(0,212,255,0.07);border-left:3px solid var(--accent);padding:9px 12px;border-radius:0 6px 6px 0;font-size:0.77rem;color:var(--text2);line-height:1.6;}
+.man-tip strong{color:var(--text);}
+.man-warn{background:rgba(255,140,0,0.08);border-left:3px solid #ff9a2e;padding:9px 12px;border-radius:0 6px 6px 0;font-size:0.77rem;color:var(--text2);line-height:1.6;}
+.man-warn strong{color:var(--text);}
+.man-kbd{display:inline-block;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:0.71rem;color:var(--text);white-space:nowrap;}
+.man-cmd{display:inline-block;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:4px;padding:1px 7px;font-family:var(--mono);font-size:0.75rem;color:var(--accent);}
+.man-voice-tbl{width:100%;border-collapse:collapse;font-size:0.77rem;}
+.man-voice-tbl th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text3);font-weight:600;font-size:0.68rem;text-transform:uppercase;letter-spacing:.5px;}
+.man-voice-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;line-height:1.55;}
+.man-voice-tbl td:first-child{color:var(--text);font-family:var(--mono);font-size:0.75rem;}
+.man-voice-tbl tr:last-child td{border-bottom:none;}
+.man-color-legend{display:flex;flex-direction:column;gap:8px;}
+.man-color-row{display:flex;align-items:center;gap:10px;font-size:0.79rem;color:var(--text2);line-height:1.5;}
+.man-swatch{width:38px;height:16px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,0.06);}
+.man-sub{font-size:0.73rem;color:var(--text3);line-height:1.5;}
+.man-divider{height:1px;background:var(--border);margin:4px 0;}
 </style>
 </head>
 <body>
@@ -626,6 +666,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     <button class="nav-tab" data-page="files" onclick="switchPage('files')">&#128194; Files</button>
     <button class="nav-tab" data-page="lookup" onclick="switchPage('lookup')">&#128269; Lookup</button>
     <button class="nav-tab" data-page="settings" onclick="switchPage('settings')">&#9881;&#65039; Settings</button>
+    <button class="nav-tab" data-page="manual" onclick="switchPage('manual')">&#128218; Manual</button>
     <button class="nav-tab admin-only" data-page="admin" onclick="switchPage('admin')" style="display:none;">&#128737;&#65039; Admin</button>
   </div>
   <div class="nav-right">
@@ -710,8 +751,8 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     <div class="fgrp">
       <div class="flabel">Silence Timeout</div>
       <div class="sil-row">
-        <input type="range" min="100" max="4000" step="50" id="silenceSlider" value="1000" oninput="updateSilenceLabel()">
-        <div class="sil-val" id="silenceVal">1.0s</div>
+        <input type="range" min="50" max="4000" step="10" id="silenceSlider" value="1000" oninput="updateSilenceLabel()">
+        <div class="sil-val" id="silenceVal">1s</div>
       </div>
       <button class="btn btn-ghost btn-sm btn-full" onclick="applySilenceChange()" style="margin-top:4px">Apply Changes</button>
     </div>
@@ -833,6 +874,10 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         <div><div class="set-label">Expected matricule length</div><div class="set-desc">Used to warn about short or long matricules on Done</div></div>
         <input type="number" class="finput" id="set-matriculeLength" min="1" max="30" value="10" style="width:70px;text-align:center;" onchange="saveSetting()">
       </div>
+      <div class="set-row">
+        <div><div class="set-label">Enforce character limit</div><div class="set-desc">Block typing beyond the expected length in matricule cells</div></div>
+        <label class="toggle"><input type="checkbox" id="set-matriculeLengthLimit" checked onchange="saveSetting()"><div class="ttrack"></div></label>
+      </div>
     </div>
     <div class="set-card">
       <div class="set-title">Auto-Save</div>
@@ -908,6 +953,292 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
   </div>
 </div>
 
+<!-- MANUAL -->
+<div id="page-manual" class="page">
+  <div class="manual-body">
+
+    <!-- Hero -->
+    <div class="man-hero">
+      <div class="man-hero-title"><span>ExamCode</span> Builder — User Manual</div>
+      <div class="man-hero-sub">A complete guide to using every feature of the app. Use the quick-links below to jump to any section.</div>
+    </div>
+
+    <!-- Table of Contents -->
+    <div class="man-card">
+      <div class="man-card-title">&#128209; Quick Navigation</div>
+      <div class="man-toc">
+        <button class="man-toc-btn" onclick="document.getElementById('man-getting-started').scrollIntoView({behavior:'smooth'})">Getting Started</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-overview').scrollIntoView({behavior:'smooth'})">Overview Page</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-builder').scrollIntoView({behavior:'smooth'})">Builder</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-voice').scrollIntoView({behavior:'smooth'})">Voice Input</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-rows').scrollIntoView({behavior:'smooth'})">Row Operations</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-files').scrollIntoView({behavior:'smooth'})">Files</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-lookup').scrollIntoView({behavior:'smooth'})">Student Lookup</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-settings').scrollIntoView({behavior:'smooth'})">Settings</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-highlights').scrollIntoView({behavior:'smooth'})">Row Highlights</button>
+        <button class="man-toc-btn" onclick="document.getElementById('man-voice-ref').scrollIntoView({behavior:'smooth'})">Voice Commands</button>
+      </div>
+    </div>
+
+    <!-- Getting Started -->
+    <div class="man-section-head" id="man-getting-started">&#128273; Getting Started</div>
+    <div class="man-card">
+      <div class="man-card-title">&#128274; Signing In</div>
+      <div class="man-p">ExamCode Builder uses a <strong>university-managed account</strong>. You cannot register yourself — your account is created by the system administrator. Contact your admin to get your login credentials.</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body">Open the app. The <strong>Sign In</strong> screen appears automatically.</div></div>
+        <div class="man-step"><div class="man-num">2</div><div class="man-step-body">Enter your <strong>email address</strong> and <strong>password</strong> provided by the administrator.</div></div>
+        <div class="man-step"><div class="man-num">3</div><div class="man-step-body">Tap <strong>Sign In</strong>. The app loads your personal workspace.</div></div>
+      </div>
+      <div class="man-tip"><strong>Tip:</strong> After 12 hours of inactivity you are automatically signed out for security. Simply sign in again — your data is safely stored.</div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#128241; Installing on Your Device</div>
+      <div class="man-p">ExamCode Builder can be installed as a <strong>standalone app</strong> on phones, tablets, and desktops — no app store required.</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body"><strong>Android / Desktop Chrome:</strong> A banner or <strong>Install</strong> button appears in the top navigation bar. Tap it and follow the prompt.</div></div>
+        <div class="man-step"><div class="man-num">2</div><div class="man-step-body"><strong>iPhone / iPad (Safari):</strong> Tap the <strong>Share</strong> icon at the bottom of Safari, then tap <strong>"Add to Home Screen"</strong>.</div></div>
+        <div class="man-step"><div class="man-num">3</div><div class="man-step-body">You can also go to <strong>Settings → Install App</strong> to find the install button and iOS instructions at any time.</div></div>
+      </div>
+    </div>
+
+    <!-- Overview Page -->
+    <div class="man-section-head" id="man-overview">&#128200; Overview Page</div>
+    <div class="man-card">
+      <div class="man-card-title">&#128200; What You See on the Dashboard</div>
+      <div class="man-p">The <strong>Overview</strong> page is your home screen. It shows a summary of all your work at a glance.</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Quick Actions:</strong> Buttons to jump directly to the Builder, Files, or Lookup pages.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>System Overview (KPIs):</strong> Total files, total matricules entered, folders, and unified folders you have access to.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Matricule Patterns:</strong> A breakdown of student levels detected across all your saved files, based on their matricule prefix.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Recent Files:</strong> Your last-modified documents. Click any file to open it in the Builder.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>In-Progress Session:</strong> If the Builder has unsaved work, a <strong>Resume</strong> button appears here so you can return to it quickly.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Course Summary:</strong> A list of all unique courses found across your saved files.</div></div>
+      </div>
+    </div>
+
+    <!-- Builder -->
+    <div class="man-section-head" id="man-builder">&#9999;&#65039; Builder</div>
+    <div class="man-card">
+      <div class="man-card-title">&#128196; What the Builder Does</div>
+      <div class="man-p">The Builder is the <strong>main working area</strong>. You use it to create an exam answer sheet — setting up a course, generating a table of exam codes, then filling in each student's matricule number either by typing or speaking.</div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#9654; Step-by-Step: Creating an Exam Sheet</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body"><strong>Course Code:</strong> Type the course code (e.g. <span class="man-kbd">CUCH2101</span>). If you have saved this course before, suggestions appear automatically — tap one to fill the title too.</div></div>
+        <div class="man-step"><div class="man-num">2</div><div class="man-step-body"><strong>Course Title:</strong> Type the full course name (e.g. <span class="man-kbd">Functional Chinese</span>). This is included in the exported CSV filename.</div></div>
+        <div class="man-step"><div class="man-num">3</div><div class="man-step-body"><strong>Prefix:</strong> The short code that appears before each exam number (e.g. <span class="man-kbd">UT</span>). Exam codes will look like UT001, UT002, etc.</div></div>
+        <div class="man-step"><div class="man-num">4</div><div class="man-step-body"><strong># Scripts:</strong> How many students are sitting the exam. This determines how many rows the table will have.</div></div>
+        <div class="man-step"><div class="man-num">5</div><div class="man-step-body">Click <strong>Generate Table</strong>. The table appears on the right with one row per student, numbered exam codes already filled in.</div></div>
+        <div class="man-step"><div class="man-num">6</div><div class="man-step-body">Fill in the <strong>Matricule</strong> column — either by typing manually in each cell, or using <strong>Voice Input</strong> (see the Voice section below).</div></div>
+        <div class="man-step"><div class="man-num">7</div><div class="man-step-body">When every matricule is filled, click <strong>Done — Close &amp; New</strong> at the bottom. The document is saved to your Files and the Builder resets for the next course.</div></div>
+      </div>
+      <div class="man-tip"><strong>Preview box:</strong> Before generating the table, the preview box shows a sample exam code so you can verify the format looks correct.</div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#128203; Typing Matricules Manually</div>
+      <div class="man-p">Click any cell in the <strong>Matricule</strong> column and type the student's number. Navigation tips:</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Press <span class="man-kbd">Enter</span> or <span class="man-kbd">↓</span> to move to the next row.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Press <span class="man-kbd">↑</span> to move to the previous row.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">If <strong>Enforce Character Limit</strong> is on in Settings, the cell stops accepting input once the matricule reaches the configured length.</div></div>
+      </div>
+      <div class="man-tip"><strong>Auto-prefix:</strong> If you have set a <strong>Matricule Prefix</strong> (e.g. <span class="man-kbd">UBa25R0</span>) and <em>Auto-prepend prefix</em> is on in Settings, focusing an empty cell automatically fills in the prefix so you only need to type the trailing digits.</div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#128190; Saving Your Work</div>
+      <div class="man-p">Your work is <strong>auto-saved to the cloud every 30 seconds</strong> (if Auto-Save is on in Settings). You can also save manually at any time:</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Save to Files</strong> (sidebar button): saves a snapshot of the current work to your Files library without closing the Builder.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Done — Close &amp; New</strong> (bottom bar): saves the finished document, clears the Builder, and resets it for the next course.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Discard</strong>: closes the document without saving. A confirmation dialog appears first.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Export CSV</strong>: downloads the current table as a <span class="man-kbd">.csv</span> file directly to your device.</div></div>
+      </div>
+      <div class="man-warn"><strong>Note:</strong> If the Builder shows unsaved data when you sign out or close the browser, re-open the app and go to the Overview page — an <em>In-Progress Session</em> card will appear with a <strong>Resume</strong> button.</div>
+    </div>
+
+    <!-- Voice Input -->
+    <div class="man-section-head" id="man-voice">&#127908; Voice Input</div>
+    <div class="man-card">
+      <div class="man-card-title">&#127908; Starting and Stopping Voice Input</div>
+      <div class="man-p">Voice input lets you fill the entire matricule column hands-free by reading student numbers aloud. The app uses your device's microphone and speech recognition.</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body">In the Builder, tap the <strong>microphone button</strong> (&#127908;) in the voice bar. The button turns red and the status bar says <em>"Listening"</em>. Your browser may ask for microphone permission the first time — allow it.</div></div>
+        <div class="man-step"><div class="man-num">2</div><div class="man-step-body">Speak the <strong>trailing digits</strong> of the first student's matricule clearly. If a <strong>Matricule Prefix</strong> is set and <em>Auto-prepend prefix</em> is on, the prefix is added automatically — you only need to speak the part after it.</div></div>
+        <div class="man-step"><div class="man-num">3</div><div class="man-step-body">After you stop speaking, the system waits for the <strong>silence timeout</strong> (adjustable slider, default 1 second) and then <strong>automatically advances</strong> to the next row, ready for the next student.</div></div>
+        <div class="man-step"><div class="man-num">4</div><div class="man-step-body">Tap the microphone button again (or it stops automatically on the last row) to end voice input.</div></div>
+      </div>
+      <div class="man-tip"><strong>Screen stays on:</strong> While you are filling matricules the screen will not turn off. It will automatically release after 10 minutes of inactivity.</div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#9201; Silence Timeout Slider</div>
+      <div class="man-p">The <strong>Silence Timeout</strong> controls how long the system waits after you stop speaking before moving to the next row. Adjust it in the Builder's left panel:</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Drag the slider <strong>left</strong> for a shorter pause (minimum 50ms — almost instant). Good for fast, confident readers.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Drag the slider <strong>right</strong> for a longer pause (up to 4 seconds). Good if you read slowly or need time between students.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">After adjusting, click <strong>Apply Changes</strong> to activate the new timeout. A confirmation toast appears.</div></div>
+      </div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#128260; Smart Voice Corrections</div>
+      <div class="man-p">Two special voice commands let you correct mistakes without stopping or using the keyboard:</div>
+      <div class="man-divider"></div>
+      <div class="man-p"><strong>1. Year Correction (while in a cell)</strong></div>
+      <div class="man-p">If a cell already contains a matricule like <span class="man-kbd">UBa25R0321</span> and you say a year-only pattern such as <span class="man-cmd">UBa23</span>, the system replaces <em>only</em> the year portion — giving you <span class="man-kbd">UBa23R0321</span>. The student digits and middle characters are kept unchanged.</div>
+      <div class="man-tip">The year-correction triggers when the spoken word is <strong>letters immediately followed by exactly 2 digits starting with 2</strong> (matching current-decade years like 20, 21, 22 … 29), and the cell already has a value with the same letter prefix.</div>
+      <div class="man-divider"></div>
+      <div class="man-p"><strong>2. "Sorry" Correction (fix the previous row)</strong></div>
+      <div class="man-p">After the system auto-advances to the next row, say <span class="man-cmd">sorry</span> followed by the correction to fix the row you just left:</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Say <span class="man-cmd">sorry UBa23</span> → goes back one row and changes the year from 25 to 23 (e.g. <span class="man-kbd">UBa25R0321</span> → <span class="man-kbd">UBa23R0321</span>).</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Say <span class="man-cmd">sorry 463</span> → goes back one row and replaces the trailing digits (e.g. <span class="man-kbd">UBa25R0321</span> → <span class="man-kbd">UBa25R0463</span>).</div></div>
+      </div>
+      <div class="man-p">After the correction you stay on the current row and can continue normally.</div>
+    </div>
+
+    <!-- Row Operations -->
+    <div class="man-section-head" id="man-rows">&#9881;&#65039; Row Operations</div>
+    <div class="man-card">
+      <div class="man-card-title">&#9745; Selecting Rows</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Tick the <strong>checkbox</strong> on the left of any row to select it. A count badge shows how many rows are selected.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Tick the <strong>top-left checkbox</strong> (in the header) to select or deselect <em>all</em> rows at once.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Shift-click</strong> a second checkbox to select a <em>range</em> of rows between the first and second click.</div></div>
+      </div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#8593; Toolbar Buttons</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>↑ Up / ↓ Down:</strong> Move selected rows up or down in the table. Useful when you need to reorder students.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>+ Row:</strong> Insert a new blank row below the last selected row.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>🗑 Delete:</strong> Remove the selected rows entirely. A confirmation dialog appears.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>✕ Clear:</strong> Wipe the matricule out of selected rows, keeping the rows in place.</div></div>
+      </div>
+      <div class="man-tip">The small <strong>↑ ↓ ✕</strong> buttons on the right side of each row move or clear that individual row without needing to select it first.</div>
+    </div>
+
+    <!-- Files -->
+    <div class="man-section-head" id="man-files">&#128194; Files</div>
+    <div class="man-card">
+      <div class="man-card-title">&#128193; My Files Tab</div>
+      <div class="man-p">All your saved exam sheets live here. Files are organised in folders you create yourself.</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Open a file:</strong> Tap any file card. A preview modal appears with options to open it in the Builder, download, share, or rename it.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Open a folder:</strong> Tap any folder to navigate inside it. Use the breadcrumb bar at the top or the back arrow to go back.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>+ Folder:</strong> Creates a new folder in the current location.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Import CSV:</strong> Brings in a previously exported CSV file and saves it as a new file in the current folder.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Sort &amp; View:</strong> Sort files by Name, Date, or Type. Switch between Tiles and List views.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Bin (Recycle Bin):</strong> Deleted files go here first. Tap <strong>Bin</strong> to review and restore or permanently delete them.</div></div>
+      </div>
+      <div class="man-tip"><strong>Right-click</strong> (or long-press on mobile) any file or folder to open a context menu with rename, move, share, and delete options.</div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#127760; Unified Folders Tab</div>
+      <div class="man-p">Unified Folders are <strong>shared workspaces</strong> that multiple users can contribute files to. They are commonly used by departments to collect exam sheets from several lecturers into one place.</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Joining a Unified Folder:</strong> Another user with access shares a link or folder ID with you. Open it from Files → Unified Folders.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Password-protected folders:</strong> Some Unified Folders require a password. Enter it when prompted.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Contributing a file:</strong> Select a file in My Files, then use the action bar's <strong>Move to Unified Folder</strong> button to send it there.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Opening from a Unified Folder:</strong> Files inside a Unified Folder open in the Builder just like your own files. Changes are saved back to the shared folder.</div></div>
+      </div>
+    </div>
+
+    <!-- Student Lookup -->
+    <div class="man-section-head" id="man-lookup">&#128269; Student Lookup</div>
+    <div class="man-card">
+      <div class="man-card-title">&#128269; Finding a Student's Exam Code</div>
+      <div class="man-p">The <strong>Lookup</strong> page lets you find any student across <em>all</em> of your saved files using their matricule number.</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body">Go to <strong>Lookup</strong> in the navigation bar.</div></div>
+        <div class="man-step"><div class="man-num">2</div><div class="man-step-body">Type the student's matricule (e.g. <span class="man-kbd">UBa25R0357</span>) in the search box.</div></div>
+        <div class="man-step"><div class="man-num">3</div><div class="man-step-body">Press <span class="man-kbd">Enter</span> or click <strong>Search</strong>.</div></div>
+        <div class="man-step"><div class="man-num">4</div><div class="man-step-body">All matching entries are shown — each one showing the <strong>course code, exam code, and the file it came from</strong>.</div></div>
+      </div>
+      <div class="man-tip">You can search for a <strong>partial matricule</strong> — the search finds any entry that <em>contains</em> what you typed.</div>
+    </div>
+
+    <!-- Settings -->
+    <div class="man-section-head" id="man-settings">&#9881;&#65039; Settings</div>
+    <div class="man-card">
+      <div class="man-card-title">&#9881;&#65039; Configuration Options</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Auto-advance after silence:</strong> When on, voice input automatically moves to the next row after the silence timeout expires. Turn off if you prefer to advance manually (press Enter).</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Auto-prepend prefix:</strong> When on, the Matricule Prefix is automatically prepended to voice input (so you only speak the digits). Turn off if you prefer to always speak full matricule numbers.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Expected matricule length:</strong> Set how many characters a valid matricule should have (default 10). Rows with a different length are highlighted in orange as a warning.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Enforce character limit:</strong> When on, matricule cells stop accepting input once they reach the expected length. Voice input is also truncated to this length.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Auto-save enabled:</strong> Saves your work to the cloud every 30 seconds automatically. Recommended to keep on.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Course Dictionary:</strong> A saved list of your frequently used course codes and their titles. When you type a code in the Builder, matching dictionary entries appear as autocomplete suggestions. Add, edit, or remove entries here.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Install App:</strong> Install ExamCode as a standalone app on your device. See <em>Getting Started → Installing on Your Device</em> above.</div></div>
+      </div>
+    </div>
+
+    <!-- Row Highlights -->
+    <div class="man-section-head" id="man-highlights">&#127912; Row Highlights Explained</div>
+    <div class="man-card">
+      <div class="man-card-title">&#127912; Colour Coding</div>
+      <div class="man-p">Rows in the Builder are colour-coded to give you instant feedback:</div>
+      <div class="man-color-legend">
+        <div class="man-color-row">
+          <div class="man-swatch" style="background:rgba(0,212,255,0.15);border-color:rgba(0,212,255,0.4);"></div>
+          <div><strong style="color:var(--text);">Active row (cyan/blue):</strong> The row currently selected for input. Moves as you navigate between cells or as voice advances.</div>
+        </div>
+        <div class="man-color-row">
+          <div class="man-swatch" style="background:rgba(255,60,90,0.18);border-color:rgba(255,60,90,0.4);"></div>
+          <div><strong style="color:var(--text);">Duplicate (red):</strong> Two or more rows share the same matricule. A <em>DUPE</em> badge also appears on the exam code. Correct one of the values to clear the warning.</div>
+        </div>
+        <div class="man-color-row">
+          <div class="man-swatch" style="background:rgba(255,140,0,0.18);border-color:rgba(255,140,0,0.4);"></div>
+          <div><strong style="color:var(--text);">Wrong length (orange):</strong> The matricule in this row is shorter or longer than the <em>Expected matricule length</em> set in Settings. Fix the matricule or adjust the expected length.</div>
+        </div>
+      </div>
+      <div class="man-tip">Orange and red highlights are warnings only — you can still export the file. Use them to spot typos before submitting.</div>
+    </div>
+
+    <!-- Voice Commands Quick Reference -->
+    <div class="man-section-head" id="man-voice-ref">&#127908; Voice Commands Quick Reference</div>
+    <div class="man-card">
+      <div class="man-card-title">&#127908; What You Can Say</div>
+      <table class="man-voice-tbl">
+        <thead><tr><th>What you say</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr><td>321</td><td>Sets the current cell to <em>prefix</em> + 321 (e.g. <em>UBa25R0321</em>). Auto-advances after silence.</td></tr>
+          <tr><td>UBa25R0321</td><td>Sets the current cell to exactly <em>UBa25R0321</em> — no extra prefix added when input already contains letters.</td></tr>
+          <tr><td>UBa23</td><td><strong>Year correction:</strong> If the current cell already contains <em>UBa25R0321</em>, changes it to <em>UBa23R0321</em>. Only the year digits change.</td></tr>
+          <tr><td>sorry 463</td><td><strong>Sorry correction:</strong> Goes back one row and replaces the trailing digits — e.g. <em>UBa25R0321</em> → <em>UBa25R0463</em>.</td></tr>
+          <tr><td>sorry UBa23</td><td><strong>Sorry correction:</strong> Goes back one row and applies a year correction — e.g. <em>UBa25R0321</em> → <em>UBa23R0321</em>.</td></tr>
+        </tbody>
+      </table>
+      <div class="man-warn"><strong>Prerequisite:</strong> Voice commands only work while the microphone is active (mic button is red). Make sure your browser has microphone permission for the app.</div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#128161; Tips for Better Voice Recognition</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Speak <strong>clearly and at a normal pace</strong>. Shouting or whispering reduces accuracy.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Reduce background noise when possible. Close windows, turn off fans, and move away from loud areas.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">For digits, say each number individually: <em>"three two one"</em> works better than <em>"three hundred twenty-one"</em> in most cases.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">If the silence timeout is triggering too early, increase it with the <strong>Silence Timeout slider</strong> and click <strong>Apply Changes</strong>.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">If the mic stops unexpectedly, tap it again to restart — it will continue from the same row.</div></div>
+      </div>
+    </div>
+
+    <div class="man-card">
+      <div class="man-card-title">&#128222; Need More Help?</div>
+      <div class="man-p">If you are still having difficulty, contact your system administrator. Provide as much detail as possible about what you were doing and what unexpected behaviour you observed.</div>
+    </div>
+
+  </div>
+</div>
+
 </div><!-- /app-body -->
 
 <!-- COPYRIGHT FOOTER (desktop) -->
@@ -922,6 +1253,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     <button class="bnav-tab" id="bt-files" onclick="switchPage('files')"><div class="bi">&#128194;</div>Files</button>
     <button class="bnav-tab" id="bt-lookup" onclick="switchPage('lookup')"><div class="bi">&#128269;</div>Lookup</button>
     <button class="bnav-tab" id="bt-settings" onclick="switchPage('settings')"><div class="bi">&#9881;&#65039;</div>Settings</button>
+    <button class="bnav-tab" id="bt-manual" onclick="switchPage('manual')"><div class="bi">&#128218;</div>Manual</button>
     <button class="bnav-tab admin-only" id="bt-admin" onclick="switchPage('admin')" style="display:none;"><div class="bi">&#128737;&#65039;</div>Admin</button>
     <div class="bnav-copyright">&copy; <span class="cr-name">GABSA PATRYLL NYAMAH</span></div>
   </div>
@@ -1035,7 +1367,7 @@ var lastFinalTranscript = '';
 var lastProcessedResultIndex = -1;
 
 var courseDict = {};
-var settings = { autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10 };
+var settings = { autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10, matriculeLengthLimit:true };
 
 var idCtr = Date.now();
 function genId() { return 'i' + (++idCtr); }
@@ -1079,7 +1411,7 @@ window.addEventListener('load', function() {
   initVoicePermission();
   checkWelcomeOverlay();
   // periodic cloud sync (no-op until signed in & loaded; saveToStorage guards itself)
-  setInterval(function() { if (settings.autosave) saveToStorage(); }, 30000);
+  _autosaveInterval = setInterval(function() { if (settings.autosave) saveToStorage(); }, 30000);
   document.addEventListener('click', function(e) {
     if (!e.target.closest('#ctxMenu')) closeCtx();
     if (!e.target.closest('#unifiedCtxMenu')) closeUnifiedCtx();
@@ -1172,7 +1504,7 @@ function applyLoadedState(d) {
     if (d.courseDict) courseDict = d.courseDict;
     if (d.fsRoot) fsRoot = d.fsRoot;
     if (d.recycleBin) recycleBin = d.recycleBin;
-    if (d.settings) settings = Object.assign({ autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10 }, d.settings);
+    if (d.settings) settings = Object.assign({ autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10, matriculeLengthLimit:true }, d.settings);
     if (d.setup) {
       var s = d.setup;
       if (s.courseCode) document.getElementById('courseCode').value = s.courseCode;
@@ -1324,17 +1656,20 @@ function renderTable() {
     '<th><input type="checkbox" id="chkAll" onchange="toggleAllRows(this.checked)" style="accent-color:var(--accent)"></th>' +
     '<th>#</th><th>Exam Code</th><th>Matricule</th><th>Actions</th>' +
     '</tr></thead><tbody>';
+  var mxLen = settings.matriculeLength || 10;
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     var active = r.id === activeRowId;
     var dupe = duplicateIds.has(r.id);
     var sel = selectedRows.has(r.id);
-    html += '<tr id="tr-' + r.id + '" class="' + (active ? 'active-row' : '') + ' ' + (dupe ? 'duplicate' : '') + '">' +
+    var wrongLen = r.matricule && r.matricule.length !== mxLen;
+    html += '<tr id="tr-' + r.id + '" class="' + (active ? 'active-row' : '') + ' ' + (dupe ? 'duplicate' : '') + (wrongLen ? ' wrong-length' : '') + '">' +
       '<td><input type="checkbox" ' + (sel ? 'checked' : '') + ' onclick="onRowCheckClick(event,\'' + r.id + '\')" style="accent-color:var(--accent)"></td>' +
       '<td class="row-num">' + (i + 1) + '</td>' +
       '<td class="exam-code-cell">' + escH(r.examCode) + (dupe ? '<span class="dupe-badge">DUPE</span>' : '') + '</td>' +
       '<td><input class="matric-input' + (r.matricule ? '' : ' empty') + '" id="inp-' + r.id + '"' +
         ' value="' + escH(r.matricule) + '" placeholder="--"' +
+        (settings.matriculeLengthLimit !== false ? ' maxlength="' + mxLen + '"' : '') +
         ' inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off"' +
         ' oninput="onMatricInput(\'' + r.id + '\',this.value)"' +
         ' onfocus="onMatricFocus(\'' + r.id + '\')"' +
@@ -1444,6 +1779,20 @@ function onRowCheckClick(e, id) {
   document.getElementById('selCount').textContent = selectedRows.size;
 }
 
+// ─── MATRICULE LENGTH HIGHLIGHT ───────────────────
+function checkMatriculeLength() {
+  var mxLen = settings.matriculeLength || 10;
+  rows.forEach(function(r) {
+    var tr = document.getElementById('tr-' + r.id);
+    if (!tr) return;
+    if (r.matricule && r.matricule.length !== mxLen) {
+      tr.classList.add('wrong-length');
+    } else {
+      tr.classList.remove('wrong-length');
+    }
+  });
+}
+
 // ─── DUPLICATES ───────────────────────────────────
 function checkDuplicates() {
   var seen = {};
@@ -1474,6 +1823,7 @@ function checkDuplicates() {
   if (el) el.textContent = dupes;
   if (dupes > prevDupeCount) toast('Duplicate matricule detected!', 'warn');
   prevDupeCount = dupes;
+  checkMatriculeLength();
 }
 
 // ─── ROW OPERATIONS ───────────────────────────────
@@ -1527,7 +1877,7 @@ function _insertBlankShiftDown(idx) {
     rows[idx].matricule = '';
     renderTable(); checkDuplicates(); autoSaveDebounced();
   }
-  if (lastVal && lastVal.trim() && idx < rows.length - 1) {
+  if (lastVal && lastVal.trim()) {
     showModal(
       'Confirm Insert Blank',
       'The last row value \'' + lastVal + '\' will be displaced (pushed off the end). Continue?',
@@ -1710,21 +2060,24 @@ function _checkLongMatricules() {
   _doFinish();
 }
 
-function _doFinish() {
+async function _doFinish() {
   var savedToUF = false;
   var ufCtx = _openedFromUnifiedFolderCtx;
   _openedFromUnifiedFolderCtx = null;
   if (ufCtx && rows.length > 0) {
     var csv = rows.map(function(r) { return r.matricule + ',' + r.examCode; }).join('\n');
-    window.FB.updateSharedFolderFileContent(ufCtx.folderId, ufCtx.fileId, csv).then(function() {
+    try {
+      await window.FB.updateSharedFolderFileContent(ufCtx.folderId, ufCtx.fileId, csv);
       if (unifiedFolderFilesCache[ufCtx.folderId]) {
         var f = unifiedFolderFilesCache[ufCtx.folderId].find(function(ff) { return ff.id === ufCtx.fileId; });
         if (f) f.content = csv;
       }
-    }).catch(function(e) {
+      savedToUF = true;
+    } catch(e) {
+      _openedFromUnifiedFolderCtx = ufCtx; // restore context so user can retry
       toast('Could not save to unified folder: ' + (e && e.message ? e.message : 'error'), 'error');
-    });
-    savedToUF = true;
+      return; // abort — keep all row data intact
+    }
   } else if (!ufCtx) {
     saveToFiles(true);
   }
@@ -1772,7 +2125,7 @@ function onCourseCodeInput(val) {
   var keys = Object.keys(courseDict).filter(function(k) { return val && k.toLowerCase().startsWith(val.toLowerCase()); });
   if (!keys.length) { list.classList.remove('open'); return; }
   list.innerHTML = keys.map(function(k, i) {
-    return '<div class="ac-item" onmousedown="selectAC(\'' + escH(k) + '\')" id="aci-' + i + '">' +
+    return '<div class="ac-item" onmousedown="selectAC(\'' + escJS(k) + '\')" id="aci-' + i + '">' +
       '<div class="ac-code">' + escH(k) + '</div>' +
       '<div class="ac-title-sm">' + escH(courseDict[k]) + '</div></div>';
   }).join('');
@@ -1818,8 +2171,9 @@ function hlAC(items) {
 
 // ─── SILENCE LABEL ────────────────────────────────
 function updateSilenceLabel() {
-  var val = parseInt(document.getElementById('silenceSlider').value) || 1000;
-  document.getElementById('silenceVal').textContent = (val / 1000).toFixed(1) + 's';
+  var val = parseInt(document.getElementById('silenceSlider').value) || 100;
+  var lbl = val >= 1000 ? (val / 1000).toFixed(val % 1000 === 0 ? 0 : 1) + 's' : val + 'ms';
+  document.getElementById('silenceVal').textContent = lbl;
   autoSaveDebounced();
 }
 
@@ -1941,7 +2295,7 @@ function _handleResult(e) {
                 toast('Last row reached — all ' + rows.length + ' rows complete. Voice stopped.', 'success');
               }
             }
-          }, appliedSilenceMs || 1000);
+          }, appliedSilenceMs || 100);
         })(targetRowId);
       }
 
@@ -2050,37 +2404,80 @@ function _setMicUI(on) {
 function processVoiceInput(transcript, targetRowId) {
   var rowId = targetRowId || activeRowId;
   if (!rowId) return;
-  var digits = transcript.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
-  if (!digits) return;
-  var pfx  = settings.autoPrefix ? (gv('matricPrefix') || '') : '';
-  var full = pfx + digits;
+
+  var rawTrimmed = transcript.trim();
+
+  // ── "Sorry" correction — fix the row directly above the current one ───
+  // Triggered by: "sorry UBa23" (year fix) or "sorry 463" (digit fix)
+  var sorryMatch = rawTrimmed.match(/^sorry[,\s]+(.+)$/i);
+  if (sorryMatch) {
+    var correctionText = sorryMatch[1].trim();
+    var currentIdx = rows.findIndex(function(r) { return r.id === rowId; });
+    if (currentIdx > 0 && correctionText) {
+      var prevRow = rows[currentIdx - 1];
+      _applyMatricCorrection(prevRow, correctionText);
+      var vs = document.getElementById('vStatus');
+      if (vs) vs.textContent = '← Corrected ' + prevRow.examCode + ': ' + prevRow.matricule;
+      checkDuplicates(); updateStats(); autoSaveDebounced();
+    } else {
+      toast('No previous row to correct', 'warn');
+    }
+    return;
+  }
+
+  // ── Normal / in-cell year-correction for the current row ──────────────
   var r = rows.find(function(x) { return x.id === rowId; });
   if (!r) return;
-  r.matricule = full;
-  var inp = document.getElementById('inp-' + rowId);
-  if (inp) { inp.value = full; inp.classList.remove('empty'); }
+  var cleaned = rawTrimmed.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+  if (!cleaned) return;
+  _applyMatricCorrection(r, cleaned);
   var vs = document.getElementById('vStatus');
-  if (vs) vs.textContent = 'Set ' + r.examCode + ': ' + full;
+  if (vs) vs.textContent = 'Set ' + r.examCode + ': ' + r.matricule;
   checkDuplicates(); updateStats(); autoSaveDebounced();
-  // Auto-stop when last row filled and auto-advance is OFF (the silence-timer handles the ON case)
+  // Auto-stop when last row filled and auto-advance is OFF
   if (!settings.autoAdvance && isListening && rows.length > 0 && rows[rows.length - 1].id === rowId) {
     stopVoice();
     toast('Last row reached — all ' + rows.length + ' rows complete. Voice stopped.', 'success');
   }
 }
 
-function resetSilenceTimer(forRowId) {
-  clearTimeout(silenceTimerHandle);
-  if (!settings.autoAdvance) return;
-  if (!isListening) return;          // never schedule advance while mic is off
-  var delay  = appliedSilenceMs || 1000;
-  var snapId = forRowId || activeRowId;
-  silenceTimerHandle = setTimeout(function() {
-    if (!isListening) return;                  // mic turned off while timer was pending
-    if (snapId && snapId === activeRowId) {    // user has not manually moved rows
-      advanceRow(snapId, 1);
+// Applies one voice correction to a row.
+// Year-correction: if text is [letters][2-digit starting with 2] (e.g. "UBa23")
+//   AND the row already has a value with the same letter prefix, only the year
+//   digits are swapped — everything else (middle separator, student digits) is kept.
+// Normal: prepend autoPrefix when input starts with digits only; skip prefix
+//   when input already contains letters (user provided their own prefix).
+function _applyMatricCorrection(r, text) {
+  var cleaned = text.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+  if (!cleaned) return;
+
+  // Year-correction pattern: letters immediately followed by exactly 2 digits,
+  // first digit must be 2  (matches current-decade years: 20, 21 … 29).
+  var yearMatch = cleaned.match(/^([A-Za-z]+)(2\d)$/);
+  if (yearMatch && r.matricule) {
+    var letterPfx = yearMatch[1];       // e.g. "UBa"
+    var newYear   = yearMatch[2];       // e.g. "23"
+    var esc = letterPfx.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var existRe = new RegExp('^(' + esc + ')(2\\d)(.*)$', 'i');
+    var m = r.matricule.match(existRe);
+    if (m) {
+      // Replace only the year, preserving prefix casing and everything after
+      r.matricule = m[1] + newYear + m[3];
+      var inp = document.getElementById('inp-' + r.id);
+      if (inp) { inp.value = r.matricule; inp.classList.remove('empty'); }
+      return;
     }
-  }, delay);
+  }
+
+  // Normal path: only prepend autoPrefix when the input is digits-only.
+  // If the user already included letters, treat their input as the full value.
+  var pfx = (settings.autoPrefix && /^\d/.test(cleaned)) ? (gv('matricPrefix') || '') : '';
+  var full = pfx + cleaned;
+  var mxLen = settings.matriculeLength || 10;
+  if (settings.matriculeLengthLimit !== false && full.length > mxLen) full = full.slice(0, mxLen);
+  r.matricule = full;
+  var inp = document.getElementById('inp-' + r.id);
+  if (inp) { inp.value = full; inp.classList.remove('empty'); }
 }
 
 // ─── EXPORT / SAVE ────────────────────────────────
@@ -2371,10 +2768,10 @@ function fcDbl(id) {
 }
 
 function openFileForEdit(node, ufContext) {
-  _openedFromUnifiedFolderCtx = ufContext || null;
   if (!node || node.type !== 'file') return;
   var lines = (node.content || '').split('\n').filter(Boolean);
   if (!lines.length) return;
+  _openedFromUnifiedFolderCtx = ufContext || null;
   var parts0 = lines[0].split(',');
   var examPrefix = (parts0[1] || '').replace(/\d+$/, '');
   document.getElementById('examPrefix').value = examPrefix;
@@ -3628,9 +4025,8 @@ function createUnifiedFolder() {
           closeModal();
           if (!window.FB || !window.FB.createSharedFolder) { toast('Not connected to server', 'error'); return; }
           try {
-            var tempHash = pass ? hashFolderPassword(pass, 'temp_' + new Date().getTime()) : null;
             var newId = await window.FB.createSharedFolder({
-              name: name, passwordHash: tempHash, color: color,
+              name: name, passwordHash: null, color: color,
               creatorUid: currentUser.uid, creatorEmail: currentUser.email,
               creatorName: (currentProfile && currentProfile.displayName) || currentUser.email
             });
@@ -4274,15 +4670,23 @@ function applySettings() {
   document.getElementById('set-autoPrefix').checked = settings.autoPrefix;
   document.getElementById('set-autosave').checked = settings.autosave;
   document.getElementById('set-matriculeLength').value = settings.matriculeLength || 10;
+  document.getElementById('set-matriculeLengthLimit').checked = settings.matriculeLengthLimit !== false;
 }
 
 function saveSetting() {
   settings.autoAdvance = document.getElementById('set-autoAdvance').checked;
   settings.autoPrefix = document.getElementById('set-autoPrefix').checked;
   settings.autosave = document.getElementById('set-autosave').checked;
+  var prevLen = settings.matriculeLength;
+  var prevLimit = settings.matriculeLengthLimit;
+  settings.matriculeLengthLimit = document.getElementById('set-matriculeLengthLimit').checked;
   var ml = parseInt(document.getElementById('set-matriculeLength').value, 10);
   settings.matriculeLength = (isNaN(ml) || ml < 1) ? 10 : ml;
   saveToStorage();
+  if (settings.matriculeLength !== prevLen || settings.matriculeLengthLimit !== prevLimit) {
+    renderTable();
+    checkDuplicates();
+  }
 }
 
 function renderDictList() {
@@ -4379,8 +4783,9 @@ function checkWelcomeOverlay() {
 
 // ─── SILENCE APPLY ────────────────────────────────
 function applySilenceChange() {
-  appliedSilenceMs = parseInt(document.getElementById('silenceSlider').value) || 1000;
-  toast('Silence timeout set to ' + (appliedSilenceMs / 1000).toFixed(1) + 's', 'success');
+  appliedSilenceMs = parseInt(document.getElementById('silenceSlider').value) || 100;
+  var lbl = appliedSilenceMs >= 1000 ? (appliedSilenceMs / 1000).toFixed(appliedSilenceMs % 1000 === 0 ? 0 : 1) + 's' : appliedSilenceMs + 'ms';
+  toast('Silence timeout set to ' + lbl, 'success');
   autoSaveDebounced();
 }
 
@@ -4590,7 +4995,7 @@ function toast(msg, type) {
    ════════════════════════════════════════════════════════════ */
 
 function setText(id, t) { var el = document.getElementById(id); if (el) el.textContent = t; }
-function escAttr(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+function escAttr(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/&/g, '&amp;'); }
 // For values embedded inside inline JS string literals within HTML attributes (double-quoted):
 // escapes backslash, single-quote (JS), and HTML special chars (&, <, >) in one pass.
 function escJS(s) { return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -4740,6 +5145,7 @@ async function appOnLogin(user, profile) {
 }
 
 function appOnLogout() {
+  clearInterval(_autosaveInterval); _autosaveInterval = null;
   _idleStop();
   currentUser = null; currentProfile = null; isAdminAccount = false; stateLoaded = false;
   rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
@@ -4875,7 +5281,7 @@ async function adminViewUserDocs(uid, email) {
   // Load user's state to inspect their document tree
   toast('Loading documents for ' + displayName + '…', 'info');
   try {
-    var payload = await window.FB.loadStateForUser ? window.FB.loadStateForUser(uid) : null;
+    var payload = null; // loadStateForUser not implemented; stats-only view below
     if (!payload) {
       showRawModal('Documents — ' + escH(displayName),
         'Document stats for this user:',
@@ -5044,6 +5450,7 @@ function updatePWAInstallCard() {
 })();
 
 // ─── IDLE AUTO-LOGOUT (12 hours) ──────────────────────────────────────────────
+var _autosaveInterval = null;
 var _idleCheckInterval = null;
 var _idleLastActive = 0;
 var IDLE_TIMEOUT_MS = 12 * 60 * 60 * 1000; // 12 hours
