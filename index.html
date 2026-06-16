@@ -1520,6 +1520,7 @@ function promptShiftRow(id, dir) {
 }
 
 function _insertBlankShiftDown(idx) {
+  if (!rows.length) return;
   var lastVal = rows[rows.length - 1].matricule;
   function doInsert() {
     for (var i = rows.length - 1; i > idx; i--) rows[i].matricule = rows[i - 1].matricule;
@@ -1572,6 +1573,7 @@ function shiftSelectedRows(dir) {
   if (!sel.length) { toast('Select rows first', 'warn'); return; }
   if (sel.length === 1) {
     var idx = rows.findIndex(function(r) { return r.id === sel[0]; });
+    if (idx < 0) return;
     promptShiftRow(rows[idx].id, dir);
     return;
   }
@@ -1835,9 +1837,6 @@ function updateSilenceLabel() {
 // onend only restarts when isListening=true (user has mic on). Unconditional
 // restart was the cause of repeated permission prompts.
 
-var recStarted   = false;
-var pendingStart = false;
-
 function initVoicePermission() {
   // Pre-build the recognition object so it is ready when the user taps the mic,
   // but do NOT start it yet — starting triggers Chrome's permission prompt before
@@ -1892,7 +1891,12 @@ function _tryStartEngine() {
     recognition.start();
     recStarted = true;
   } catch(e) {
-    recStarted = true; // already running
+    // Only flag as started when the engine is genuinely already running.
+    // Other errors (e.g. fatal InvalidStateError after a hardware failure) must
+    // NOT set recStarted=true, otherwise onend can never trigger a restart.
+    if (e && e.message && e.message.toLowerCase().indexOf('already') !== -1) {
+      recStarted = true;
+    }
   }
 }
 
@@ -4289,8 +4293,8 @@ function renderDictList() {
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">' +
       '<span style="font-family:var(--mono);font-size:0.75rem;color:var(--accent);min-width:80px">' + escH(k) + '</span>' +
       '<span style="font-size:0.75rem;color:var(--text2);flex:1">' + escH(courseDict[k]) + '</span>' +
-      '<button class="tbtn" title="Edit" onclick="editDictEntry(\'' + escH(k) + '\')">&#9999;&#65039;</button>' +
-      '<button class="tbtn d" onclick="delDictEntry(\'' + escH(k) + '\')">&#10005;</button>' +
+      '<button class="tbtn" title="Edit" onclick="editDictEntry(\'' + escJS(k) + '\')">&#9999;&#65039;</button>' +
+      '<button class="tbtn d" onclick="delDictEntry(\'' + escJS(k) + '\')">&#10005;</button>' +
       '</div>';
   }).join('');
 }
@@ -4587,6 +4591,9 @@ function toast(msg, type) {
 
 function setText(id, t) { var el = document.getElementById(id); if (el) el.textContent = t; }
 function escAttr(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+// For values embedded inside inline JS string literals within HTML attributes (double-quoted):
+// escapes backslash, single-quote (JS), and HTML special chars (&, <, >) in one pass.
+function escJS(s) { return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function computeStats() {
   var files = 0, mats = 0;
@@ -4729,9 +4736,11 @@ async function appOnLogin(user, profile) {
   setSaveLabel('Synced');
   switchPage('overview');
   logAct('login', 'Signed in');
+  _idleStart();
 }
 
 function appOnLogout() {
+  _idleStop();
   currentUser = null; currentProfile = null; isAdminAccount = false; stateLoaded = false;
   rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
   fsRoot = { name:'root', type:'folder', children:[], id:'root' }; curFolderId = 'root';
@@ -4956,6 +4965,7 @@ window.addEventListener('beforeinstallprompt', function(e) {
   _pwaPrompt = e;
   var btn = document.getElementById('installBtn');
   if (btn) btn.style.display = '';
+  if (typeof updatePWAInstallCard === 'function') updatePWAInstallCard();
 });
 
 window.addEventListener('appinstalled', function() {
@@ -5032,6 +5042,59 @@ function updatePWAInstallCard() {
     document.head.appendChild(lnk);
   } catch (e) {}
 })();
+
+// ─── IDLE AUTO-LOGOUT (12 hours) ──────────────────────────────────────────────
+var _idleCheckInterval = null;
+var _idleLastActive = 0;
+var IDLE_TIMEOUT_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function _idleResetActive() {
+  _idleLastActive = Date.now();
+  try { localStorage.setItem('examcode_last_active', String(_idleLastActive)); } catch(e) {}
+}
+
+var _idleThrottleTs = 0;
+function _idleOnActivity() {
+  var now = Date.now();
+  if (now - _idleThrottleTs > 60000) { // write to localStorage at most once per minute
+    _idleThrottleTs = now;
+    _idleResetActive();
+  }
+}
+
+function _idleStart() {
+  // Guard: if last activity was stored (e.g. page was reloaded) check it now
+  try {
+    var stored = parseInt(localStorage.getItem('examcode_last_active'), 10);
+    if (stored && Date.now() - stored > IDLE_TIMEOUT_MS) {
+      setTimeout(function() {
+        if (window.FB) window.FB.signOutUser();
+        setTimeout(function() { appShowAuthError('You were signed out after 12 hours of inactivity.'); }, 300);
+      }, 0);
+      return;
+    }
+  } catch(e) {}
+  _idleResetActive();
+  clearInterval(_idleCheckInterval);
+  _idleCheckInterval = setInterval(function() {
+    if (_idleLastActive && Date.now() - _idleLastActive > IDLE_TIMEOUT_MS) {
+      _idleStop();
+      closeModal();
+      if (window.FB) window.FB.signOutUser();
+      setTimeout(function() { appShowAuthError('You were signed out after 12 hours of inactivity.'); }, 300);
+    }
+  }, 60000); // check every minute
+}
+
+function _idleStop() {
+  clearInterval(_idleCheckInterval);
+  _idleCheckInterval = null;
+  try { localStorage.removeItem('examcode_last_active'); } catch(e) {}
+}
+
+['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function(evt) {
+  document.addEventListener(evt, _idleOnActivity, { passive: true });
+});
 
 // ─── SCREEN WAKE LOCK (matricule input only) ──────────────────────────────────
 var _matricWakeLock = null;
