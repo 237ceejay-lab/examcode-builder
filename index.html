@@ -556,6 +556,19 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
 .uf-report-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.8rem;}
 .uf-report-row:last-child{border-bottom:none;}
 
+/* ─── STUDENTS PAGE ─── */
+#page-students{flex-direction:column;overflow-y:auto;}
+.stud-body{padding:16px 20px;max-width:820px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:14px;padding-bottom:40px;}
+.stud-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.stud-search{flex:1;min-width:160px;}
+.stud-table-wrap{overflow-x:auto;}
+.stud-table{width:100%;border-collapse:collapse;font-size:0.875rem;}
+.stud-table th,.stud-table td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.stud-table th{font-weight:600;color:var(--text3);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;background:var(--surface2);}
+.stud-table tr:hover td{background:var(--surface2);}
+/* Student name hint shown below each matricule input in the Builder */
+.sname-hint{display:block;font-size:0.64rem;color:var(--accent);margin-top:1px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;line-height:1.3;opacity:0.9;}
+
 /* ─── MANUAL PAGE ─── */
 #page-manual{flex-direction:column;overflow-y:auto;}
 .manual-body{padding:20px;display:flex;flex-direction:column;gap:20px;max-width:680px;width:100%;margin:0 auto;padding-bottom:40px;}
@@ -665,6 +678,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     <button class="nav-tab" data-page="builder" onclick="switchPage('builder')">&#9999;&#65039; Builder</button>
     <button class="nav-tab" data-page="files" onclick="switchPage('files')">&#128194; Files</button>
     <button class="nav-tab" data-page="lookup" onclick="switchPage('lookup')">&#128269; Lookup</button>
+    <button class="nav-tab" data-page="students" onclick="switchPage('students')">&#127891; Students</button>
     <button class="nav-tab" data-page="settings" onclick="switchPage('settings')">&#9881;&#65039; Settings</button>
     <button class="nav-tab" data-page="manual" onclick="switchPage('manual')">&#128218; Manual</button>
     <button class="nav-tab admin-only" data-page="admin" onclick="switchPage('admin')" style="display:none;">&#128737;&#65039; Admin</button>
@@ -1101,6 +1115,14 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Say <span class="man-cmd">sorry 463</span> → goes back one row and replaces the trailing digits (e.g. <span class="man-kbd">UBa25R0321</span> → <span class="man-kbd">UBa25R0463</span>).</div></div>
       </div>
       <div class="man-p">After the correction you stay on the current row and can continue normally.</div>
+      <div class="man-divider"></div>
+      <div class="man-p"><strong>3. "Now" Year Override (change the year for this cell only)</strong></div>
+      <div class="man-p">When the common prefix is set to e.g. <span class="man-kbd">UBa25R0</span> but a student's matricule uses a different year, say <span class="man-cmd">now YY</span> before entering that student's digits:</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body">Say <span class="man-cmd">now 23</span> — the system acknowledges the year override and waits. The common prefix for this cell becomes <span class="man-kbd">UBa23R0</span>.</div></div>
+        <div class="man-step"><div class="man-num">2</div><div class="man-step-body">Say the remaining digits, e.g. <span class="man-cmd">021</span> — the cell is filled with <span class="man-kbd">UBa23R0021</span>.</div></div>
+      </div>
+      <div class="man-tip">You can also say both parts in one breath: <span class="man-cmd">now 23 021</span> fills the cell immediately with <span class="man-kbd">UBa23R0021</span>. The year override applies only to that one cell — the next row reverts to the normal common prefix.</div>
     </div>
 
     <!-- Row Operations -->
@@ -1150,6 +1172,37 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Contributing a file:</strong> Select a file in My Files, then use the action bar's <strong>Move to Unified Folder</strong> button to send it there.</div></div>
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Opening from a Unified Folder:</strong> Files inside a Unified Folder open in the Builder just like your own files. Changes are saved back to the shared folder.</div></div>
       </div>
+    </div>
+
+    <!-- Student Dictionary -->
+    <div class="man-section-head" id="man-students">&#127891; Student Dictionary</div>
+    <div class="man-card">
+      <div class="man-card-title">&#127891; What is the Student Dictionary?</div>
+      <div class="man-p">The <strong>Students</strong> page holds a shared database of student names keyed by matricule number. Once populated, the Builder automatically shows each student's name below their matricule as you fill in cells — giving you instant confirmation that you are entering the right code.</div>
+      <div class="man-tip">Student names are <strong>visible inside the app only</strong>. All downloaded documents (CSV exports) contain only matricule numbers — names are never written to files.</div>
+    </div>
+    <div class="man-card">
+      <div class="man-card-title">&#128196; Uploading the Student List (Admin Only)</div>
+      <div class="man-p">Only a <strong>Super-admin</strong> account can add or modify the dictionary. The easiest way to populate it is to upload a CSV file:</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body">Go to <strong>Students</strong> in the navigation bar.</div></div>
+        <div class="man-step"><div class="man-num">2</div><div class="man-step-body">Click <strong>&#8679; Upload CSV</strong>. The file must have a header row with columns named <span class="man-kbd">matricule</span> and <span class="man-kbd">name</span> (order does not matter). Tab-separated files are also accepted.</div></div>
+        <div class="man-step"><div class="man-num">3</div><div class="man-step-body">If any matricule in the CSV already exists in the dictionary, a conflict dialog lets you <strong>skip</strong> duplicates (keep existing names) or <strong>overwrite</strong> them.</div></div>
+        <div class="man-step"><div class="man-num">4</div><div class="man-step-body">Click <strong>+ Add Student</strong> to add individual entries one at a time.</div></div>
+      </div>
+      <div class="man-tip">The system enforces <strong>one name per matricule</strong>. Attempting to add a matricule that is already in the dictionary triggers a warning before any change is made.</div>
+    </div>
+    <div class="man-card">
+      <div class="man-card-title">&#128269; Searching and Sorting</div>
+      <div class="man-p">All users (not just admins) can search and sort the dictionary:</div>
+      <div class="man-steps">
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Use the <strong>search bar</strong> to filter by any part of a name or matricule.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Click <strong>Sort</strong> to toggle between <em>Matricule</em> order and <em>Name</em> (alphabetical) order.</div></div>
+      </div>
+    </div>
+    <div class="man-card">
+      <div class="man-card-title">&#8681; Downloading the Dictionary (Admin Only)</div>
+      <div class="man-p">Super-admins can download the full dictionary as a CSV file using the <strong>&#8681; Download CSV</strong> button. The file contains two columns: <span class="man-kbd">matricule</span> and <span class="man-kbd">name</span>. Regular users do not see this button.</div>
     </div>
 
     <!-- Student Lookup -->
@@ -1239,6 +1292,43 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
   </div>
 </div>
 
+<!-- STUDENTS DICTIONARY -->
+<div id="page-students" class="page">
+  <div class="stud-body">
+    <div class="sec-head">&#127891; Student Dictionary</div>
+    <!-- Admin-only toolbar -->
+    <div id="studAdminBar" class="stud-toolbar" style="display:none;">
+      <button class="btn btn-primary btn-sm" onclick="openAddStudentModal()">&#43; Add Student</button>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+        &#8679; Upload CSV
+        <input type="file" accept=".csv,.txt" onchange="handleStudentCSVUpload(this)" style="display:none;">
+      </label>
+      <button class="btn btn-ghost btn-sm" onclick="downloadStudentDict()">&#8681; Download CSV</button>
+    </div>
+    <!-- Search + sort (all users) -->
+    <div class="stud-toolbar">
+      <input class="finput stud-search" id="studSearch" placeholder="Search by name or matricule…" oninput="renderStudentsPage()">
+      <button class="btn btn-ghost btn-sm" id="studSortBtn" onclick="toggleStudentSort()">Sort: Matricule &#8597;</button>
+    </div>
+    <div id="studCount" style="font-size:0.75rem;color:var(--text3);"></div>
+    <div class="stud-table-wrap">
+      <table class="stud-table">
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th>Matricule</th>
+            <th>Name</th>
+            <th id="studActHead"></th>
+          </tr>
+        </thead>
+        <tbody id="studBody">
+          <tr><td colspan="4" style="text-align:center;padding:28px;color:var(--muted);">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app-body -->
 
 <!-- COPYRIGHT FOOTER (desktop) -->
@@ -1252,6 +1342,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     <button class="bnav-tab" id="bt-builder" onclick="switchPage('builder')"><div class="bi">&#9999;&#65039;</div>Builder</button>
     <button class="bnav-tab" id="bt-files" onclick="switchPage('files')"><div class="bi">&#128194;</div>Files</button>
     <button class="bnav-tab" id="bt-lookup" onclick="switchPage('lookup')"><div class="bi">&#128269;</div>Lookup</button>
+    <button class="bnav-tab" id="bt-students" onclick="switchPage('students')"><div class="bi">&#127891;</div>Students</button>
     <button class="bnav-tab" id="bt-settings" onclick="switchPage('settings')"><div class="bi">&#9881;&#65039;</div>Settings</button>
     <button class="bnav-tab" id="bt-manual" onclick="switchPage('manual')"><div class="bi">&#128218;</div>Manual</button>
     <button class="bnav-tab admin-only" id="bt-admin" onclick="switchPage('admin')" style="display:none;"><div class="bi">&#128737;&#65039;</div>Admin</button>
@@ -1365,9 +1456,15 @@ var pendingStart       = false;
 var silenceTimerHandle = null;
 var lastFinalTranscript = '';
 var lastProcessedResultIndex = -1;
+var _pendingYearOverride    = null; // set by "now YY" command; consumed by next _applyMatricCorrection call
 
 var courseDict = {};
 var settings = { autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10, matriculeLengthLimit:true };
+
+// ─── STUDENT DICTIONARY STATE ─────────────────────
+var studentDictCache  = {};      // _normKey(matricule) → { name, matricule }
+var studentDictLoaded = false;
+var _studSortBy       = 'matricule'; // 'matricule' | 'name'
 
 var idCtr = Date.now();
 function genId() { return 'i' + (++idCtr); }
@@ -1447,6 +1544,7 @@ function switchPage(name) {
   if (name === 'settings') { renderDictList(); if (typeof updatePWAInstallCard === 'function') updatePWAInstallCard(); }
   if (name === 'overview') renderOverview();
   if (name === 'admin') renderAdmin();
+  if (name === 'students') renderStudentsPage();
 }
 
 function toggleSetupPanel() {
@@ -1674,7 +1772,7 @@ function renderTable() {
         ' oninput="onMatricInput(\'' + r.id + '\',this.value)"' +
         ' onfocus="onMatricFocus(\'' + r.id + '\')"' +
         ' onkeydown="onMatricKeydown(event,\'' + r.id + '\')"' +
-        '></td>' +
+        '><span id="sname-' + r.id + '" class="sname-hint">' + escH(lookupStudentName(r.matricule) || '') + '</span></td>' +
       '<td><div class="act-cell">' +
         '<button class="tbtn" onclick="promptShiftRow(\'' + r.id + '\',\'up\')" title="Move up">&#8593;</button>' +
         '<button class="tbtn" onclick="promptShiftRow(\'' + r.id + '\',\'down\')" title="Move down">&#8595;</button>' +
@@ -1725,6 +1823,7 @@ function onMatricInput(id, val) {
   r.matricule = val;
   var inp = document.getElementById('inp-' + id);
   if (inp) inp.classList.toggle('empty', !val);
+  updateRowStudentName(id);
   checkDuplicates();
   updateStats();
   autoSaveDebounced();
@@ -2276,15 +2375,16 @@ function _handleResult(e) {
         if (settings.autoAdvance) advanceRow(activeRowId, 1);
       }
 
-      // "Sorry" corrections must not trigger a row advance — the user stays on
-      // the current row to continue after the correction.
+      // "Sorry" corrections and "now YY" commands must not trigger a row advance —
+      // the user stays on the current row to continue after each.
       var isSorryCorrection = /^sorry[,\s]+/i.test(finalTxt.trim());
+      var isNowCommand      = /^now[,\s]+\d{2}\s*$/i.test(finalTxt.trim());
       var targetRowId = activeRowId;
       processVoiceInput(finalTxt, targetRowId);
 
       // Start the silence-delay timer — row advances after appliedSilenceMs of
       // silence. This is exactly what the slider controls.
-      if (settings.autoAdvance && !isSorryCorrection) {
+      if (settings.autoAdvance && !isSorryCorrection && !isNowCommand) {
         (function(snapId) {
           silenceTimerHandle = setTimeout(function() {
             silenceTimerHandle = null;
@@ -2304,6 +2404,11 @@ function _handleResult(e) {
 
       var vt = document.getElementById('vTranscript');
       if (vt) vt.textContent = finalTxt;
+      // After a sorry correction or "now YY" command, stop processing further
+      // results in this batch. Chrome can emit follow-up echo results (e.g. "213"
+      // after "sorry 213", or "23" after "now 23") that would fill the current
+      // row and trigger an unwanted silence-timer advance.
+      if (isSorryCorrection || isNowCommand) break;
     } else {
       interim += e.results[i][0].transcript;
     }
@@ -2371,6 +2476,7 @@ function stopVoice() {
 
   clearTimeout(silenceTimerHandle);
   silenceTimerHandle = null;
+  _pendingYearOverride = null;
 
   // Properly stop the engine. Replay issues that made stop() dangerous before
   // are now handled by lastProcessedResultIndex, so this is safe.
@@ -2414,6 +2520,7 @@ function processVoiceInput(transcript, targetRowId) {
   // Triggered by: "sorry UBa23" (year fix) or "sorry 463" (digit fix)
   var sorryMatch = rawTrimmed.match(/^sorry[,\s]+(.+)$/i);
   if (sorryMatch) {
+    _pendingYearOverride = null; // discard any pending "now" override
     var correctionText = sorryMatch[1].trim();
     var currentIdx = rows.findIndex(function(r) { return r.id === rowId; });
     if (currentIdx > 0 && correctionText) {
@@ -2428,12 +2535,47 @@ function processVoiceInput(transcript, targetRowId) {
     return;
   }
 
+  // ── "Now" year override — change the year in the common prefix for this cell ─
+  // "now 23"       → sets year override, waits for remaining digits on same cell
+  // "now 23 021"   → fills cell immediately: prefix-year→23 + "021" = UBa23R0021
+  var nowMatch = rawTrimmed.match(/^now[,\s]+(\d{2})(?:[,\s]+(.+))?$/i);
+  if (nowMatch) {
+    var overrideYear  = nowMatch[1];   // e.g. "23"
+    var trailingPart  = nowMatch[2];   // e.g. "021", or undefined for two-step
+    var r0 = rows.find(function(x) { return x.id === rowId; });
+    if (!r0) return;
+    var vs0 = document.getElementById('vStatus');
+    if (trailingPart) {
+      // Single utterance: build the full value with the modified prefix directly
+      var basePfx = (settings.autoPrefix) ? (gv('matricPrefix') || '') : '';
+      var modPfx  = basePfx.replace(/^([A-Za-z]+)(\d{2})/, '$1' + overrideYear);
+      var cleanedTail = trailingPart.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+      if (cleanedTail) {
+        _pendingYearOverride = null;
+        _applyMatricCorrection(r0, modPfx + cleanedTail);
+        updateRowStudentName(rowId);
+        if (vs0) vs0.textContent = 'Set ' + r0.examCode + ': ' + r0.matricule;
+        checkDuplicates(); updateStats(); autoSaveDebounced();
+        if (!settings.autoAdvance && isListening && rows.length > 0 && rows[rows.length - 1].id === rowId) {
+          stopVoice();
+          toast('Last row reached — all ' + rows.length + ' rows complete. Voice stopped.', 'success');
+        }
+      }
+    } else {
+      // Two-step: hold the year override and stay on this cell
+      _pendingYearOverride = overrideYear;
+      if (vs0) vs0.textContent = 'Year override → 20' + overrideYear + ' — say remaining digits';
+    }
+    return;
+  }
+
   // ── Normal / in-cell year-correction for the current row ──────────────
   var r = rows.find(function(x) { return x.id === rowId; });
   if (!r) return;
   var cleaned = rawTrimmed.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
   if (!cleaned) return;
   _applyMatricCorrection(r, cleaned);
+  updateRowStudentName(rowId);
   var vs = document.getElementById('vStatus');
   if (vs) vs.textContent = 'Set ' + r.examCode + ': ' + r.matricule;
   checkDuplicates(); updateStats(); autoSaveDebounced();
@@ -2493,6 +2635,11 @@ function _applyMatricCorrection(r, text) {
   // Normal path: only prepend autoPrefix when the input is digits-only.
   // If the user already included letters, treat their input as the full value.
   var pfx = (settings.autoPrefix && /^\d/.test(cleaned)) ? (gv('matricPrefix') || '') : '';
+  // "now YY" override: swap the year in the prefix before applying it.
+  if (pfx && _pendingYearOverride !== null) {
+    pfx = pfx.replace(/^([A-Za-z]+)(\d{2})/, '$1' + _pendingYearOverride);
+    _pendingYearOverride = null;
+  }
   var full = pfx + cleaned;
   var mxLen = settings.matriculeLength || 10;
   if (settings.matriculeLengthLimit !== false && full.length > mxLen) full = full.slice(0, mxLen);
@@ -4765,6 +4912,264 @@ function clearDictionary() {
   ]);
 }
 
+// ─── STUDENT DICTIONARY ───────────────────────────────────────────────────────
+function _normKey(m) { return (m||'').trim().toLowerCase().replace(/\s+/g,''); }
+
+function lookupStudentName(matricule) {
+  if (!matricule || !studentDictLoaded) return null;
+  return (studentDictCache[_normKey(matricule)]||{}).name || null;
+}
+
+function updateRowStudentName(rowId) {
+  var span = document.getElementById('sname-'+rowId);
+  if (!span) return;
+  var r = rows.find(function(x){return x.id===rowId;});
+  span.textContent = (r && r.matricule) ? (lookupStudentName(r.matricule)||'') : '';
+}
+
+function updateAllStudentNames() { rows.forEach(function(r){updateRowStudentName(r.id);}); }
+
+async function loadStudentDict() {
+  if (!window.FB || !window.FB.loadStudentDict) return;
+  try {
+    var data = await window.FB.loadStudentDict();
+    studentDictCache = data || {};
+    studentDictLoaded = true;
+    updateAllStudentNames();
+    if (document.getElementById('page-students') && document.getElementById('page-students').classList.contains('active')) renderStudentsPage();
+  } catch(e) { console.warn('loadStudentDict', e); }
+}
+
+async function _saveStudentDict() {
+  if (!isAdminAccount || !window.FB || !window.FB.saveStudentDict) return;
+  try { await window.FB.saveStudentDict(studentDictCache); }
+  catch(e) { toast('Failed to save dictionary: '+(e.message||e), 'error'); }
+}
+
+function renderStudentsPage() {
+  var adminBar = document.getElementById('studAdminBar');
+  if (adminBar) adminBar.style.display = isAdminAccount ? '' : 'none';
+  var actHead = document.getElementById('studActHead');
+  if (actHead) actHead.textContent = isAdminAccount ? 'Actions' : '';
+
+  var filter = ((document.getElementById('studSearch')||{}).value||'').trim().toLowerCase();
+  var entries = Object.values(studentDictCache);
+  if (filter) {
+    entries = entries.filter(function(e){
+      return _normKey(e.matricule).includes(_normKey(filter)) || (e.name||'').toLowerCase().includes(filter);
+    });
+  }
+  entries.sort(function(a,b){
+    return _studSortBy==='name'
+      ? (a.name||'').localeCompare(b.name||'')
+      : (a.matricule||'').localeCompare(b.matricule||'');
+  });
+
+  var total = Object.keys(studentDictCache).length;
+  var cntEl = document.getElementById('studCount');
+  if (cntEl) cntEl.textContent = total+' student'+(total!==1?'s':'')+(filter?' — '+entries.length+' shown':'');
+
+  var tbody = document.getElementById('studBody');
+  if (!tbody) return;
+  if (!studentDictLoaded) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--muted);">Loading dictionary…</td></tr>';
+    return;
+  }
+  if (!entries.length) {
+    var msg = filter ? 'No results for "'+escH(filter)+'"' : (isAdminAccount ? 'No students yet. Use <strong>Upload CSV</strong> or <strong>+ Add Student</strong> to populate the dictionary.' : 'No students in dictionary yet.');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--muted);">'+msg+'</td></tr>';
+    return;
+  }
+  var html = '';
+  entries.forEach(function(e,i){
+    var k = escJS(_normKey(e.matricule));
+    html += '<tr><td>'+(i+1)+'</td><td style="font-family:var(--mono);font-size:0.82rem;">'+escH(e.matricule)+'</td><td>'+escH(e.name)+'</td>';
+    if (isAdminAccount) {
+      html += '<td><button class="tbtn" title="Edit" onclick="editStudentEntry(\''+k+'\')">&#9998;</button> <button class="tbtn d" title="Remove" onclick="deleteStudentEntry(\''+k+'\')">&#10005;</button></td>';
+    } else {
+      html += '<td></td>';
+    }
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function toggleStudentSort() {
+  _studSortBy = (_studSortBy==='matricule') ? 'name' : 'matricule';
+  var btn = document.getElementById('studSortBtn');
+  if (btn) btn.textContent = 'Sort: '+(_studSortBy==='matricule'?'Matricule':'Name')+' ⇅';
+  renderStudentsPage();
+}
+
+// Raw modal helper — allows HTML body content (unlike showModal which uses textContent)
+function _openStudModal(title, bodyHtml, buttons) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  document.getElementById('modalInputArea').innerHTML = '';
+  var ma = document.getElementById('modalActions');
+  ma.innerHTML = buttons.map(function(b,i){return '<button class="btn '+b.cls+'" id="mab'+i+'">'+escH(b.label)+'</button>';}).join('');
+  buttons.forEach(function(b,i){document.getElementById('mab'+i).onclick = b.cb;});
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openAddStudentModal(prefillMatricule) {
+  if (!isAdminAccount) return;
+  _openStudModal('Add Student',
+    '<div class="fgrp" style="margin-bottom:10px"><div class="flabel">Matricule</div>'+
+    '<input class="finput" id="mStMatric" placeholder="e.g. UBa25R0321" autocapitalize="off" value="'+escH(prefillMatricule||'')+'"></div>'+
+    '<div class="fgrp"><div class="flabel">Full Name</div>'+
+    '<input class="finput" id="mStName" placeholder="e.g. JOHN DOE" autocapitalize="words"></div>',
+    [
+      { label:'Cancel',      cls:'btn-ghost',   cb: closeModal },
+      { label:'Add Student', cls:'btn-primary',  cb: _confirmAddStudent }
+    ]
+  );
+  setTimeout(function(){ var el=document.getElementById(prefillMatricule?'mStName':'mStMatric'); if(el) el.focus(); },60);
+}
+
+function _confirmAddStudent() {
+  if (!isAdminAccount) return;
+  var mat  = ((document.getElementById('mStMatric')||{}).value||'').trim();
+  var name = ((document.getElementById('mStName') ||{}).value||'').trim();
+  if (!mat||!name){ toast('Matricule and name are required.','warn'); return; }
+  var key = _normKey(mat);
+  if (studentDictCache[key]) {
+    _openStudModal('Duplicate Matricule',
+      '<p>Matricule <strong>'+escH(mat)+'</strong> already belongs to <strong>'+escH(studentDictCache[key].name)+
+      '</strong>.<br>Replace with <strong>'+escH(name)+'</strong>?</p>',
+      [
+        { label:'Cancel',  cls:'btn-ghost',  cb: closeModal },
+        { label:'Replace', cls:'btn-danger', cb: function(){_doAddStudent(mat,name);} }
+      ]
+    );
+    return;
+  }
+  _doAddStudent(mat, name);
+}
+
+async function _doAddStudent(mat, name) {
+  studentDictCache[_normKey(mat)] = { name:name, matricule:mat };
+  closeModal();
+  toast('Student added.','success');
+  await _saveStudentDict();
+  renderStudentsPage();
+  updateAllStudentNames();
+}
+
+function editStudentEntry(key) {
+  if (!isAdminAccount) return;
+  var e = studentDictCache[key]; if (!e) return;
+  _openStudModal('Edit Student',
+    '<div class="fgrp" style="margin-bottom:10px"><div class="flabel">Matricule</div>'+
+    '<input class="finput" value="'+escH(e.matricule)+'" readonly style="opacity:0.55;cursor:not-allowed;" tabindex="-1"></div>'+
+    '<div class="fgrp"><div class="flabel">Full Name</div>'+
+    '<input class="finput" id="mStEditName" value="'+escH(e.name)+'" autocapitalize="words"></div>',
+    [
+      { label:'Cancel', cls:'btn-ghost',  cb: closeModal },
+      { label:'Save',   cls:'btn-primary', cb: function(){
+        var nm = ((document.getElementById('mStEditName')||{}).value||'').trim();
+        if (!nm){ toast('Name required.','warn'); return; }
+        studentDictCache[key].name = nm;
+        closeModal(); toast('Updated.','success');
+        _saveStudentDict(); renderStudentsPage(); updateAllStudentNames();
+      }}
+    ]
+  );
+  setTimeout(function(){ var el=document.getElementById('mStEditName'); if(el){el.focus();el.select();} },60);
+}
+
+function deleteStudentEntry(key) {
+  if (!isAdminAccount) return;
+  var e = studentDictCache[key]; if (!e) return;
+  _openStudModal('Remove Student',
+    '<p>Remove <strong>'+escH(e.name)+'</strong> (<code style="font-size:0.85em;">'+escH(e.matricule)+'</code>) from the dictionary?</p>',
+    [
+      { label:'Cancel', cls:'btn-ghost',  cb: closeModal },
+      { label:'Remove', cls:'btn-danger', cb: async function(){
+        delete studentDictCache[key];
+        closeModal(); toast('Removed.','success');
+        await _saveStudentDict(); renderStudentsPage(); updateAllStudentNames();
+      }}
+    ]
+  );
+}
+
+function handleStudentCSVUpload(input) {
+  if (!isAdminAccount) return;
+  var file = input.files[0]; if (!file) return;
+  input.value = '';
+  var reader = new FileReader();
+  reader.onload = function(ev){ _parseStudentCSV(ev.target.result||''); };
+  reader.readAsText(file,'UTF-8');
+}
+
+function _parseStudentCSV(text) {
+  var lines = text.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
+  if (lines.length < 2){ toast('CSV must have a header and at least one data row.','warn'); return; }
+  var header = lines[0].split(/,|\t/).map(function(h){return h.trim().toLowerCase().replace(/['"]/g,'');});
+  var mi=-1, ni=-1;
+  header.forEach(function(h,i){
+    if (mi===-1 && (h==='matricule'||h.startsWith('matric')||h==='id'||h==='student id')) mi=i;
+    if (ni===-1 && (h==='name'||h==='full name'||h.includes('name'))) ni=i;
+  });
+  if (mi===-1) mi=0;
+  if (ni===-1) ni=(mi===0?1:0);
+
+  var added=0, dupes=[], bad=0, newE={};
+  for (var i=1;i<lines.length;i++){
+    var cols = lines[i].split(/,|\t/).map(function(c){return c.trim().replace(/^["']|["']$/g,'');});
+    var mat=(cols[mi]||'').trim(), nm=(cols[ni]||'').trim();
+    if (!mat||!nm){bad++;continue;}
+    var key=_normKey(mat);
+    if (studentDictCache[key]||newE[key]){
+      dupes.push({matricule:mat,name:nm,existing:(studentDictCache[key]||newE[key]).name});
+    } else {
+      newE[key]={name:nm,matricule:mat}; added++;
+    }
+  }
+
+  function doImport(overwriteDupes){
+    Object.assign(studentDictCache,newE);
+    if (overwriteDupes) dupes.forEach(function(d){studentDictCache[_normKey(d.matricule)]={name:d.name,matricule:d.matricule};});
+    closeModal();
+    var cnt=added+(overwriteDupes?dupes.length:0);
+    toast('Imported '+cnt+' student'+(cnt!==1?'s':'')+'.','success');
+    _saveStudentDict(); renderStudentsPage(); updateAllStudentNames();
+  }
+
+  if (dupes.length) {
+    var list = dupes.slice(0,5).map(function(d){
+      return '<li>'+escH(d.matricule)+': was <em>'+escH(d.existing)+'</em> → new <em>'+escH(d.name)+'</em></li>';
+    }).join('');
+    if (dupes.length>5) list += '<li style="opacity:0.6;">…and '+(dupes.length-5)+' more</li>';
+    _openStudModal('Duplicate Matricules Found',
+      '<p><strong>'+added+'</strong> new student'+(added!==1?'s':'')+' ready to import.</p>'+
+      '<p>The following <strong>'+dupes.length+'</strong> matricule'+(dupes.length!==1?'s were':' was')+' found in both the CSV and the existing dictionary:</p>'+
+      '<ul style="font-size:0.8rem;margin:8px 0 0 18px;line-height:2.1;">'+list+'</ul>'+
+      '<p style="margin-top:10px;font-size:0.85rem;">Skip duplicates (import only new) or overwrite?</p>',
+      [
+        { label:'Cancel',                    cls:'btn-ghost',   cb: closeModal },
+        { label:'Skip Dupes (Import '+added+')', cls:'btn-primary', cb: function(){doImport(false);} },
+        { label:'Overwrite All',             cls:'btn-danger',  cb: function(){doImport(true);} }
+      ]
+    );
+  } else {
+    if (!added){ toast('No valid rows found in CSV.'+(bad?' ('+bad+' rows skipped)':''),'warn'); return; }
+    doImport(false);
+  }
+}
+
+function downloadStudentDict() {
+  if (!isAdminAccount){ toast('Admin only.','warn'); return; }
+  var entries = Object.values(studentDictCache).sort(function(a,b){return (a.matricule||'').localeCompare(b.matricule||'');});
+  var csv = 'matricule,name\n'+entries.map(function(e){
+    return '"'+(e.matricule||'').replace(/"/g,'""')+'","'+(e.name||'').replace(/"/g,'""')+'"';
+  }).join('\n');
+  dlText(csv,'student_dictionary.csv','text/csv');
+  if (window.FB&&window.FB.logActivity) window.FB.logActivity('export','student_dictionary.csv');
+  toast('Downloaded '+entries.length+' students.','success');
+}
+
 function nukeStorage() {
   showModal('Delete ALL Your Data?', 'Erase ALL your files, folders, courses and settings permanently?\n\nThis affects only your account — other users are unaffected.', null, [
     { label: 'Delete Everything', cls: 'btn-danger', cb: function() {
@@ -5156,6 +5561,7 @@ async function appOnLogin(user, profile) {
   // Load unified folders then render files page
   loadUnifiedFolders().then(function() { renderFilesPage(); });
   renderDictList();
+  loadStudentDict();
 
   document.getElementById('authScreen').style.display = 'none';
   appClearAuthMsg();
@@ -5169,6 +5575,7 @@ function appOnLogout() {
   clearInterval(_autosaveInterval); _autosaveInterval = null;
   _idleStop();
   currentUser = null; currentProfile = null; isAdminAccount = false; stateLoaded = false;
+  studentDictCache = {}; studentDictLoaded = false;
   rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
   fsRoot = { name:'root', type:'folder', children:[], id:'root' }; curFolderId = 'root';
   recycleBin = []; courseDict = {}; adminUsersCache = []; adminActivityCache = [];
@@ -5844,6 +6251,23 @@ if (!CONFIGURED) {
     },
     permanentDeleteSharedFolderFile: (folderId, binItemId) =>
       deleteDoc(doc(db, 'sharedFolders', folderId, 'deletedFiles', binItemId)),
+
+    // ── student dictionary (shared across all users) ──
+    async loadStudentDict() {
+      try {
+        const snap = await getDoc(doc(db, 'shared', 'studentDict'));
+        if (!snap.exists()) return {};
+        return snap.data().data || {};
+      } catch(e) { console.warn('loadStudentDict', e); return {}; }
+    },
+    async saveStudentDict(data) {
+      const u = auth.currentUser; if (!u) throw new Error('Not signed in');
+      await setDoc(doc(db, 'shared', 'studentDict'), {
+        data,
+        updatedAt: serverTimestamp(),
+        updatedBy: u.uid
+      });
+    },
     updateSharedFolderFileContent: (folderId, fileId, content) =>
       setDoc(doc(db, 'sharedFolders', folderId, 'files', fileId), { content: content }, { merge: true }),
     deleteSharedFolderFileHard: (folderId, fileId) =>
