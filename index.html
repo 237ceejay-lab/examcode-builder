@@ -483,7 +483,7 @@ td:nth-child(3){width:95px;}
 @keyframes auth-credit-fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 .auth-credit-rule{width:48px;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.35),transparent);}
 .auth-credit-by{font-size:0.55rem;letter-spacing:3px;text-transform:uppercase;color:var(--text3);font-family:var(--mono);}
-.auth-credit-name{font-size:0.62rem;letter-spacing:2.2px;text-transform:uppercase;color:rgba(0,212,255,0.55);font-family:var(--mono);font-weight:700;}
+.auth-credit-name{font-size:0.68rem;letter-spacing:2.4px;text-transform:uppercase;color:var(--accent);font-family:var(--mono);font-weight:700;text-shadow:0 0 12px rgba(0,212,255,0.5);}
 
 /* user chip + signout in nav */
 .nav-user{display:flex;align-items:center;gap:9px;}
@@ -1480,6 +1480,7 @@ var selectedRows = new Set();
 var activeRowId = null;
 var duplicateIds = new Set();
 var prevDupeCount = 0;
+var _suppressDupeToast = false;
 
 var fsRoot = { name:'root', type:'folder', children:[], id:'root' };
 var curFolderId = 'root';
@@ -1659,7 +1660,9 @@ function applyLoadedState(d) {
       rows = d.rows;
       activeRowId = rows[0].id;
       renderTable();
+      _suppressDupeToast = true;
       checkDuplicates();
+      _suppressDupeToast = false;
       document.getElementById('doneBar').style.display = 'flex';
     }
     updatePreview();
@@ -1960,7 +1963,7 @@ function checkDuplicates() {
   var dupes = duplicateIds.size > 0 ? Math.floor(duplicateIds.size / 2) : 0;
   var el = document.getElementById('st-dupes');
   if (el) el.textContent = dupes;
-  if (dupes > prevDupeCount) toast('Duplicate matricule detected!', 'warn');
+  if (dupes > prevDupeCount && !_suppressDupeToast) toast('Duplicate matricule detected!', 'warn');
   prevDupeCount = dupes;
   checkMatriculeLength();
 }
