@@ -1661,6 +1661,13 @@ function applyLoadedState(d) {
       activeRowId = rows[0].id;
       renderTable();
       _suppressDupeToast = true;
+      var _ls = {}, _ld = new Set();
+      rows.forEach(function(r) {
+        if (!r.matricule) return;
+        var k = r.matricule.trim().toLowerCase();
+        if (_ls[k]) { _ld.add(r.id); _ld.add(_ls[k]); } else _ls[k] = r.id;
+      });
+      prevDupeCount = _ld.size > 0 ? Math.floor(_ld.size / 2) : 0;
       checkDuplicates();
       _suppressDupeToast = false;
       document.getElementById('doneBar').style.display = 'flex';
