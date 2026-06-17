@@ -467,6 +467,19 @@ td:nth-child(3){width:95px;}
 .auth-busy{opacity:.6;pointer-events:none;}
 .auth-copy{text-align:center;margin-top:22px;font-size:0.65rem;color:var(--text3);font-family:var(--mono);}
 
+/* ─── AUTH LOADING OVERLAY ─── */
+.auth-loading-overlay{position:absolute;inset:0;border-radius:var(--radius);background:rgba(7,10,18,0.85);backdrop-filter:blur(6px);z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
+.auth-loading-overlay.visible{display:flex;}
+.auth-spinner-wrap{position:relative;width:56px;height:56px;}
+.auth-spinner-track{width:56px;height:56px;border-radius:50%;border:3px solid rgba(0,212,255,0.12);}
+.auth-spinner-arc{position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:var(--accent);box-shadow:0 0 18px rgba(0,212,255,0.45);animation:auth-spin .72s linear infinite;}
+@keyframes auth-spin{to{transform:rotate(360deg);}}
+.auth-loading-label{display:flex;align-items:center;gap:4px;font-size:0.78rem;color:var(--accent);font-family:var(--mono);letter-spacing:1px;}
+.auth-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);animation:auth-dot-bounce .9s ease-in-out infinite;}
+.auth-dot:nth-child(2){animation-delay:.15s;}
+.auth-dot:nth-child(3){animation-delay:.30s;}
+@keyframes auth-dot-bounce{0%,80%,100%{transform:translateY(0);opacity:.4;}40%{transform:translateY(-5px);opacity:1;}}
+
 /* user chip + signout in nav */
 .nav-user{display:flex;align-items:center;gap:9px;}
 .user-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 4px 3px 10px;max-width:230px;}
@@ -667,6 +680,13 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     </div>
 
     <div class="auth-copy">&copy; GABSA PATRYLL NYAMAH</div>
+    <div class="auth-loading-overlay" id="authLoadingOverlay">
+      <div class="auth-spinner-wrap">
+        <div class="auth-spinner-track"></div>
+        <div class="auth-spinner-arc"></div>
+      </div>
+      <div class="auth-loading-label">Signing in<div class="auth-dot"></div><div class="auth-dot"></div><div class="auth-dot"></div></div>
+    </div>
   </div>
 </div>
 
@@ -1102,7 +1122,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
 
     <div class="man-card">
       <div class="man-card-title">&#128260; Smart Voice Corrections</div>
-      <div class="man-p">Two special voice commands let you correct mistakes without stopping or using the keyboard:</div>
+      <div class="man-p">Several special voice commands let you correct mistakes without stopping or using the keyboard:</div>
       <div class="man-divider"></div>
       <div class="man-p"><strong>1. Year Correction (while in a cell)</strong></div>
       <div class="man-p">If a cell already contains a matricule like <span class="man-kbd">UBa25R0321</span> and you say a year-only pattern such as <span class="man-cmd">UBa23</span>, the system replaces <em>only</em> the year portion — giving you <span class="man-kbd">UBa23R0321</span>. The student digits and middle characters are kept unchanged.</div>
@@ -1113,16 +1133,19 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <div class="man-steps">
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Say <span class="man-cmd">sorry UBa23</span> → goes back one row and changes the year from 25 to 23 (e.g. <span class="man-kbd">UBa25R0321</span> → <span class="man-kbd">UBa23R0321</span>).</div></div>
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Say <span class="man-cmd">sorry 463</span> → goes back one row and replaces the trailing digits (e.g. <span class="man-kbd">UBa25R0321</span> → <span class="man-kbd">UBa25R0463</span>).</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Say <span class="man-cmd">sorry now 21 003</span> → goes back one row and fixes <strong>both</strong> the year <em>and</em> trailing digits in a single step (e.g. <span class="man-kbd">UBa23R0131</span> → <span class="man-kbd">UBa21R0003</span>). Works with <span class="man-cmd">sorry n 21 003</span> or <span class="man-cmd">sorry no 21 003</span> too.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body">Say <span class="man-cmd">sorry now 21</span> → goes back one row and swaps only the year, leaving the existing trailing digits unchanged (e.g. <span class="man-kbd">UBa23R0321</span> → <span class="man-kbd">UBa21R0321</span>).</div></div>
       </div>
       <div class="man-p">After the correction you stay on the current row and can continue normally.</div>
       <div class="man-divider"></div>
       <div class="man-p"><strong>3. "Now" Year Override (change the year for this cell only)</strong></div>
-      <div class="man-p">When the common prefix is set to e.g. <span class="man-kbd">UBa25R0</span> but a student's matricule uses a different year, say <span class="man-cmd">now YY</span> before entering that student's digits:</div>
+      <div class="man-p">When the common prefix is set to e.g. <span class="man-kbd">UBa25R0</span> but a student's matricule uses a different year, say <span class="man-cmd">now YY</span> before entering that student's digits. The words <strong>now</strong>, <strong>no</strong>, and <strong>n</strong> all activate this command — the system accepts all three in case speech recognition mishears you:</div>
       <div class="man-steps">
-        <div class="man-step"><div class="man-num">1</div><div class="man-step-body">Say <span class="man-cmd">now 23</span> — the system acknowledges the year override and waits. The common prefix for this cell becomes <span class="man-kbd">UBa23R0</span>.</div></div>
+        <div class="man-step"><div class="man-num">1</div><div class="man-step-body">Say <span class="man-cmd">now 23</span> — the system acknowledges the year override and waits. The status bar shows <em>"Now command — say the year"</em>. The common prefix for this cell becomes <span class="man-kbd">UBa23R0</span>.</div></div>
         <div class="man-step"><div class="man-num">2</div><div class="man-step-body">Say the remaining digits, e.g. <span class="man-cmd">021</span> — the cell is filled with <span class="man-kbd">UBa23R0021</span>.</div></div>
       </div>
-      <div class="man-tip">You can also say both parts in one breath: <span class="man-cmd">now 23 021</span> fills the cell immediately with <span class="man-kbd">UBa23R0021</span>. The year override applies only to that one cell — the next row reverts to the normal common prefix.</div>
+      <div class="man-tip"><strong>One-breath shortcut:</strong> Say everything at once — <span class="man-cmd">now 23 021</span> fills the cell immediately with <span class="man-kbd">UBa23R0021</span>. Also works as <span class="man-cmd">n 23 021</span> or <span class="man-cmd">no 23 021</span>. The year override applies only to that one cell — the next row reverts to the normal common prefix.</div>
+      <div class="man-tip" style="margin-top:6px;"><strong>Two-step trigger:</strong> If speech recognition returns just <span class="man-cmd">now</span> (or <span class="man-cmd">n</span> / <span class="man-cmd">no</span>) without any digits, the system arms the trigger and waits. Your next spoken digits are automatically prefixed with "now " so the year override still fires correctly.</div>
     </div>
 
     <!-- Row Operations -->
@@ -1266,8 +1289,13 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
           <tr><td>321</td><td>Sets the current cell to <em>prefix</em> + 321 (e.g. <em>UBa25R0321</em>). Auto-advances after silence.</td></tr>
           <tr><td>UBa25R0321</td><td>Sets the current cell to exactly <em>UBa25R0321</em> — no extra prefix added when input already contains letters.</td></tr>
           <tr><td>UBa23</td><td><strong>Year correction:</strong> If the current cell already contains <em>UBa25R0321</em>, changes it to <em>UBa23R0321</em>. Only the year digits change.</td></tr>
+          <tr><td>now / n / no</td><td><strong>Now trigger (standalone):</strong> Arms the year-override mode. Status bar shows <em>"Now command — say the year"</em>. Your next spoken digits are treated as <em>now &lt;digits&gt;</em> automatically.</td></tr>
+          <tr><td>now 23 021</td><td><strong>Now (single utterance):</strong> Immediately fills the current cell with <em>UBa23R0021</em>, overriding the year in the common prefix. Also works as <em>n 23 021</em> or <em>no 23 021</em>.</td></tr>
+          <tr><td>now 23</td><td><strong>Now (two-step):</strong> Arms the year override to 23 and waits for you to say the remaining digits on the next breath.</td></tr>
           <tr><td>sorry 463</td><td><strong>Sorry correction:</strong> Goes back one row and replaces the trailing digits — e.g. <em>UBa25R0321</em> → <em>UBa25R0463</em>.</td></tr>
           <tr><td>sorry UBa23</td><td><strong>Sorry correction:</strong> Goes back one row and applies a year correction — e.g. <em>UBa25R0321</em> → <em>UBa23R0321</em>.</td></tr>
+          <tr><td>sorry now 21 003</td><td><strong>Sorry + Now (combined):</strong> Goes back one row and fixes <em>both</em> the year and trailing digits at once — e.g. <em>UBa23R0131</em> → <em>UBa21R0003</em>. Works with <em>sorry n 21 003</em> or <em>sorry no 21 003</em> too.</td></tr>
+          <tr><td>sorry now 21</td><td><strong>Sorry + Now (year only):</strong> Goes back one row and swaps just the year, leaving the existing trailing digits untouched — e.g. <em>UBa23R0321</em> → <em>UBa21R0321</em>.</td></tr>
         </tbody>
       </table>
       <div class="man-warn"><strong>Prerequisite:</strong> Voice commands only work while the microphone is active (mic button is red). Make sure your browser has microphone permission for the app.</div>
@@ -5536,10 +5564,16 @@ async function appSignIn() {
   var email = (document.getElementById('siEmail').value || '').trim();
   var pass = document.getElementById('siPass').value || '';
   if (!email || !pass) { appShowAuthError('Enter your email and password.'); return; }
-  var btn = document.getElementById('siBtn'); btn.classList.add('auth-busy'); btn.textContent = 'Signing in…';
+  var btn = document.getElementById('siBtn');
+  var overlay = document.getElementById('authLoadingOverlay');
+  btn.classList.add('auth-busy');
+  if (overlay) overlay.classList.add('visible');
   try { await window.FB.signIn(email, pass); }
-  catch (e) { appShowAuthError(friendlyAuthError(e)); }
-  finally { btn.classList.remove('auth-busy'); btn.textContent = 'Sign In'; }
+  catch (e) {
+    if (overlay) overlay.classList.remove('visible');
+    btn.classList.remove('auth-busy');
+    appShowAuthError(friendlyAuthError(e));
+  }
 }
 async function appSetupOwner() {
   appClearAuthMsg();
@@ -5621,6 +5655,8 @@ function appOnLogout() {
   try { renderTable(); updateStats(); } catch (e) {}
   document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = 'none'; });
   var as = document.getElementById('authScreen'); if (as) as.style.display = 'flex';
+  var siBtn = document.getElementById('siBtn'); if (siBtn) { siBtn.classList.remove('auth-busy'); siBtn.textContent = 'Sign In'; }
+  var authOvl = document.getElementById('authLoadingOverlay'); if (authOvl) authOvl.classList.remove('visible');
   authTab('signin');
   ['siPass','suPass'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   setSaveLabel('Signed out');
