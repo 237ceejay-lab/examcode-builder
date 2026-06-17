@@ -1457,6 +1457,7 @@ var silenceTimerHandle = null;
 var lastFinalTranscript = '';
 var lastProcessedResultIndex = -1;
 var _pendingYearOverride    = null; // set by "now YY" command; consumed by next _applyMatricCorrection call
+var _pendingNowTrigger      = false; // set when "now" heard alone; next utterance gets "now " prepended
 
 var courseDict = {};
 var settings = { autoAdvance:true, autoPrefix:true, autosave:true, matriculeLength:10, matriculeLengthLimit:true };
@@ -2378,7 +2379,7 @@ function _handleResult(e) {
       // "Sorry" corrections and "now YY" commands must not trigger a row advance —
       // the user stays on the current row to continue after each.
       var isSorryCorrection = /^sorry[,\s]+/i.test(finalTxt.trim());
-      var isNowCommand      = /^now[,\s]+\d{2}\s*$/i.test(finalTxt.trim());
+      var isNowCommand      = /^now[,\s]+\d{2}\s*$/i.test(finalTxt.trim()) || /^now$/i.test(finalTxt.trim()) || _pendingNowTrigger;
       var targetRowId = activeRowId;
       processVoiceInput(finalTxt, targetRowId);
 
@@ -2477,6 +2478,7 @@ function stopVoice() {
   clearTimeout(silenceTimerHandle);
   silenceTimerHandle = null;
   _pendingYearOverride = null;
+  _pendingNowTrigger   = false;
 
   // Properly stop the engine. Replay issues that made stop() dangerous before
   // are now handled by lastProcessedResultIndex, so this is safe.
@@ -2514,13 +2516,33 @@ function processVoiceInput(transcript, targetRowId) {
   var rowId = targetRowId || activeRowId;
   if (!rowId) return;
 
-  var rawTrimmed = _normalizeUBaVariants(transcript.trim());
+  var rawTrimmed = transcript.trim();
 
+  // ── Standalone "now" — user said "now" without year digits ────────────
+  // Speech recognition sometimes splits "now 23" into two final results:
+  // "now" then "23". Arm the trigger and wait for the year; do NOT write
+  // "now" into the cell.
+  if (/^now$/i.test(rawTrimmed)) {
+    _pendingNowTrigger   = true;
+    _pendingYearOverride = null;
+    var vsPend = document.getElementById('vStatus');
+    if (vsPend) vsPend.textContent = 'Now command — say the year (e.g. "23")';
+    return;
+  }
   // ── "Sorry" correction — fix the row directly above the current one ───
   // Triggered by: "sorry UBa23" (year fix) or "sorry 463" (digit fix)
   var sorryMatch = rawTrimmed.match(/^sorry[,\s]+(.+)$/i);
+
+  // ── Pending "now" trigger — inject prefix so nowMatch fires below ─────
+  // Guard: only inject when next word is digits; otherwise discard the trigger
+  // so a misheard word (e.g. a matricule) is processed normally.
+  if (!sorryMatch && _pendingNowTrigger) {
+    _pendingNowTrigger = false;
+    if (/^\d/.test(rawTrimmed)) rawTrimmed = 'now ' + rawTrimmed;
+  }
   if (sorryMatch) {
     _pendingYearOverride = null; // discard any pending "now" override
+    _pendingNowTrigger   = false;
     var correctionText = sorryMatch[1].trim();
     var currentIdx = rows.findIndex(function(r) { return r.id === rowId; });
     if (currentIdx > 0 && correctionText) {
@@ -2586,16 +2608,6 @@ function processVoiceInput(transcript, targetRowId) {
   }
 }
 
-// Normalizes various speech-recognition renderings of "UBa" to the canonical form.
-function _normalizeUBaVariants(text) {
-  var s = text;
-  s = s.replace(/\byou\s+be?\s+a\b/gi, 'UBa');          // "You Be A" / "You Ba"
-  s = s.replace(/\bu[\s.]+b[\s.]+a\b/gi, 'UBa');         // "U B A" / "U.B.A"
-  s = s.replace(/\b(?:youba|yuba)\b/gi, 'UBa');           // "Youba" / "Yuba"
-  s = s.replace(/\buber\b/gi, 'UBa');                     // "Uber" (common misrecognition)
-  s = s.replace(/\buba\b/gi, 'UBa');                      // "Uba" / "uba"
-  return s;
-}
 
 // After the UBa prefix, the separator letter(s) (e.g. "R" in UBa25R0321) should be uppercase.
 function _normalizeMatriculeCase(s) {
@@ -5568,6 +5580,9 @@ async function appOnLogin(user, profile) {
   setSaveLabel('Synced');
   switchPage('overview');
   logAct('login', 'Signed in');
+  if (!_autosaveInterval) {
+    _autosaveInterval = setInterval(function() { if (settings.autosave) saveToStorage(); }, 30000);
+  }
   _idleStart();
 }
 
