@@ -2379,7 +2379,7 @@ function _handleResult(e) {
       // "Sorry" corrections and "now YY" commands must not trigger a row advance —
       // the user stays on the current row to continue after each.
       var isSorryCorrection = /^sorry[,\s]+/i.test(finalTxt.trim());
-      var isNowCommand      = /^now[,\s]*\d{2}\s*$/i.test(finalTxt.trim()) || /^now$/i.test(finalTxt.trim()) || _pendingNowTrigger;
+      var isNowCommand      = /^n(?:o(?:w)?)?[,\s]*\d{2}\s*$/i.test(finalTxt.trim()) || /^n(?:o(?:w)?)?$/i.test(finalTxt.trim()) || _pendingNowTrigger;
       var targetRowId = activeRowId;
       processVoiceInput(finalTxt, targetRowId);
 
@@ -2522,7 +2522,7 @@ function processVoiceInput(transcript, targetRowId) {
   // Speech recognition sometimes splits "now 23" into two final results:
   // "now" then "23". Arm the trigger and wait for the year; do NOT write
   // "now" into the cell.
-  if (/^now$/i.test(rawTrimmed)) {
+  if (/^n(?:o(?:w)?)?$/i.test(rawTrimmed)) {
     _pendingNowTrigger   = true;
     _pendingYearOverride = null;
     var vsPend = document.getElementById('vStatus');
@@ -2547,7 +2547,29 @@ function processVoiceInput(transcript, targetRowId) {
     var currentIdx = rows.findIndex(function(r) { return r.id === rowId; });
     if (currentIdx > 0 && correctionText) {
       var prevRow = rows[currentIdx - 1];
-      _applyMatricCorrection(prevRow, correctionText);
+      // "sorry now YY digits" — apply a year-override correction to the previous row
+      var sorryNowMatch = correctionText.match(/^n(?:o(?:w)?)?[,\s]*(\d{2})(?:[,\s]*(.+))?$/i);
+      if (sorryNowMatch) {
+        var soYear  = sorryNowMatch[1];
+        var soTrail = sorryNowMatch[2];
+        var soBasePfx = (settings.autoPrefix) ? (gv('matricPrefix') || '') : '';
+        var soModPfx  = soBasePfx.replace(/^([A-Za-z]+)(\d{2})/, '$1' + soYear);
+        if (soTrail) {
+          var soClean = soTrail.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+          if (soClean) _applyMatricCorrection(prevRow, soModPfx + soClean);
+        } else {
+          // Year-only: swap just the year in the existing value
+          var soExist = prevRow.matricule || '';
+          var soExistM = soExist.match(/^([A-Za-z]+)(2\d)(.*)$/);
+          if (soExistM) {
+            prevRow.matricule = soExistM[1] + soYear + soExistM[3];
+            var soInp = document.getElementById('inp-' + prevRow.id);
+            if (soInp) { soInp.value = prevRow.matricule; soInp.classList.remove('empty'); }
+          }
+        }
+      } else {
+        _applyMatricCorrection(prevRow, correctionText);
+      }
       var vs = document.getElementById('vStatus');
       if (vs) vs.textContent = '← Corrected ' + prevRow.examCode + ': ' + prevRow.matricule;
       checkDuplicates(); updateStats(); autoSaveDebounced();
@@ -2560,7 +2582,7 @@ function processVoiceInput(transcript, targetRowId) {
   // ── "Now" year override — change the year in the common prefix for this cell ─
   // "now 23"       → sets year override, waits for remaining digits on same cell
   // "now 23 021"   → fills cell immediately: prefix-year→23 + "021" = UBa23R0021
-  var nowMatch = rawTrimmed.match(/^now[,\s]*(\d{2})(?:[,\s]*(.+))?$/i);
+  var nowMatch = rawTrimmed.match(/^n(?:o(?:w)?)?[,\s]*(\d{2})(?:[,\s]*(.+))?$/i);
   if (nowMatch) {
     var overrideYear  = nowMatch[1];   // e.g. "23"
     var trailingPart  = nowMatch[2];   // e.g. "021", or undefined for two-step
