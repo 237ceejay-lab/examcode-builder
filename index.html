@@ -2379,7 +2379,7 @@ function _handleResult(e) {
       // "Sorry" corrections and "now YY" commands must not trigger a row advance —
       // the user stays on the current row to continue after each.
       var isSorryCorrection = /^sorry[,\s]+/i.test(finalTxt.trim());
-      var isNowCommand      = /^now[,\s]+\d{2}\s*$/i.test(finalTxt.trim()) || /^now$/i.test(finalTxt.trim()) || _pendingNowTrigger;
+      var isNowCommand      = /^now[,\s]*\d{2}\s*$/i.test(finalTxt.trim()) || /^now$/i.test(finalTxt.trim()) || _pendingNowTrigger;
       var targetRowId = activeRowId;
       processVoiceInput(finalTxt, targetRowId);
 
@@ -2560,7 +2560,7 @@ function processVoiceInput(transcript, targetRowId) {
   // ── "Now" year override — change the year in the common prefix for this cell ─
   // "now 23"       → sets year override, waits for remaining digits on same cell
   // "now 23 021"   → fills cell immediately: prefix-year→23 + "021" = UBa23R0021
-  var nowMatch = rawTrimmed.match(/^now[,\s]+(\d{2})(?:[,\s]+(.+))?$/i);
+  var nowMatch = rawTrimmed.match(/^now[,\s]*(\d{2})(?:[,\s]*(.+))?$/i);
   if (nowMatch) {
     var overrideYear  = nowMatch[1];   // e.g. "23"
     var trailingPart  = nowMatch[2];   // e.g. "021", or undefined for two-step
