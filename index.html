@@ -624,6 +624,15 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
 .man-swatch{width:38px;height:16px;border-radius:3px;flex-shrink:0;border:1px solid rgba(255,255,255,0.06);}
 .man-sub{font-size:0.73rem;color:var(--text3);line-height:1.5;}
 .man-divider{height:1px;background:var(--border);margin:4px 0;}
+/* ─── ACCOUNT REQUESTS / DELEGATION ─── */
+.req-badge{display:inline-block;background:var(--red);color:#fff;font-size:0.56rem;font-family:var(--mono);font-weight:700;padding:0 5px;border-radius:10px;margin-left:4px;min-width:16px;text-align:center;vertical-align:middle;line-height:1.6;}
+.req-badge:empty{display:none;}
+.pill-pending{background:rgba(255,149,0,0.15);color:var(--orange);border:1px solid rgba(255,149,0,0.4);}
+.pill-rejected{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,60,90,0.4);}
+.pill-approver{background:rgba(57,255,126,0.12);color:var(--green);border:1px solid rgba(57,255,126,0.3);}
+.admin-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.filter-btn{border:1px solid var(--border2);background:var(--surface3);color:var(--text2);border-radius:6px;font-size:0.68rem;font-weight:600;padding:4px 10px;cursor:pointer;font-family:var(--font);transition:all .15s;}
+.filter-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
 </style>
 </head>
 <body>
@@ -639,6 +648,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     <div id="authForms" style="display:none;">
       <div class="auth-toggle">
         <button id="tabSignin" class="active" onclick="authTab('signin')">Sign In</button>
+        <button id="tabSignup" onclick="authTab('signup')">Sign Up</button>
         <button id="tabSetup" onclick="authTab('setup')">First-time Setup</button>
       </div>
 
@@ -660,6 +670,27 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         </div>
         <button class="btn btn-primary btn-full" id="siBtn" onclick="appSignIn()">Sign In</button>
         <div class="auth-foot"><span class="auth-link" onclick="appForgot()">Forgot password?</span></div>
+      </div>
+
+      <!-- SELF-REGISTRATION (requires admin approval) -->
+      <div id="formSignup" style="display:none;">
+        <div class="admin-note" style="margin-bottom:14px;">Create a new account. You will be able to sign in once an administrator approves your request.</div>
+        <div class="auth-field">
+          <div class="flabel">Display Name</div>
+          <input class="finput" id="srName" placeholder="Your full name" autocapitalize="words" onkeydown="if(event.key==='Enter')document.getElementById('srEmail').focus()">
+        </div>
+        <div class="auth-field">
+          <div class="flabel">Email</div>
+          <input class="finput" id="srEmail" type="email" autocomplete="username" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('srPass').focus()">
+        </div>
+        <div class="auth-field">
+          <div class="flabel">Password</div>
+          <div class="auth-pass-wrap">
+            <input class="finput" id="srPass" type="password" autocomplete="new-password" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter')appRegisterUser()">
+            <span class="pass-eye" onclick="togglePass('srPass',this)">&#128065;</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="srBtn" onclick="appRegisterUser()">Request Account</button>
       </div>
 
       <!-- FIRST-TIME OWNER SETUP -->
@@ -967,6 +998,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
 
     <div class="admin-tabs">
       <button class="admin-tab active" id="atUsers" onclick="adminTab('users')">Users</button>
+      <button class="admin-tab" id="atRequests" onclick="adminTab('requests')">Account Requests <span class="req-badge" id="reqBadge"></span></button>
       <button class="admin-tab" id="atActivity" onclick="adminTab('activity')">Activity Log</button>
     </div>
 
@@ -994,6 +1026,19 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         <button class="btn btn-ghost btn-sm" onclick="adminRefresh()">&#8635; Refresh</button>
       </div>
       <div class="activity-list" id="adminActivityList"><div class="admin-empty">Loading activity…</div></div>
+    </div>
+
+    <!-- REQUESTS -->
+    <div class="admin-section" id="adminRequests">
+      <div class="admin-toolbar">
+        <input class="finput search-mini" id="adminReqSearch" placeholder="Search requests…" oninput="renderAdminRequests()">
+        <button class="btn btn-ghost btn-sm" onclick="adminRefresh()">&#8635; Refresh</button>
+        <button class="btn btn-success btn-sm" id="approveAllBtn" onclick="adminApproveAllPending()" style="display:none;">&#10003; Approve All</button>
+      </div>
+      <div id="adminRequestsList"><div class="admin-empty">No pending requests.</div></div>
+      <div class="admin-note" style="margin-top:12px;">
+        <strong>Delegated approvers</strong> can also approve and reject requests. Grant this right to any active user from the Users tab using the <em>Delegate Approver</em> action.
+      </div>
     </div>
   </div>
 </div>
@@ -1539,6 +1584,8 @@ var isAdminAccount = false;
 var stateLoaded    = false;   // becomes true once this user's cloud data has loaded
 var adminUsersCache = [];
 var adminActivityCache = [];
+var adminRequestsCache = [];
+var _adminUserFilter = 'all';
 
 // ─── INIT (UI only — data loads after sign-in) ────
 window.addEventListener('load', function() {
@@ -5560,11 +5607,13 @@ function timeAgo(ts) {
 // ─── AUTH SCREEN UI ───────────────────────────────
 function authTab(which) {
   appClearAuthMsg();
-  var isSign = which !== 'setup';
-  document.getElementById('tabSignin').classList.toggle('active', isSign);
-  document.getElementById('tabSetup').classList.toggle('active', !isSign);
-  document.getElementById('formSignin').style.display = isSign ? 'block' : 'none';
-  document.getElementById('formSetup').style.display = isSign ? 'none' : 'block';
+  ['signin','signup','setup'].forEach(function(t) {
+    var key = t.charAt(0).toUpperCase() + t.slice(1);
+    var btn = document.getElementById('tab' + key);
+    var form = document.getElementById('form' + key);
+    if (btn) btn.classList.toggle('active', t === which);
+    if (form) form.style.display = t === which ? 'block' : 'none';
+  });
 }
 function togglePass(id, el) {
   var i = document.getElementById(id); if (!i) return;
@@ -5616,6 +5665,31 @@ async function appForgot() {
   try { await window.FB.sendReset(email); appShowAuthOk('Password reset email sent to ' + email + '. Check your inbox.'); }
   catch (e) { appShowAuthError(friendlyAuthError(e)); }
 }
+async function appRegisterUser() {
+  appClearAuthMsg();
+  var name  = (document.getElementById('srName').value  || '').trim();
+  var email = (document.getElementById('srEmail').value || '').trim();
+  var pass  = document.getElementById('srPass').value   || '';
+  if (!name)  { appShowAuthError('Enter your display name.'); return; }
+  if (!email) { appShowAuthError('Enter your email address.'); return; }
+  if (!pass || pass.length < 6) { appShowAuthError('Password must be at least 6 characters.'); return; }
+  if (window.FB.isOwnerEmail && window.FB.isOwnerEmail(email)) {
+    appShowAuthError('Owner email must use First-time Setup, not Sign Up.'); return;
+  }
+  var btn = document.getElementById('srBtn');
+  btn.classList.add('auth-busy'); btn.textContent = 'Sending request…';
+  try {
+    await window.FB.registerNewUser(name, email, pass);
+    appClearAuthMsg();
+    appShowAuthOk('Request submitted! An administrator will review your account and activate it. You will then be able to sign in.');
+    ['srName','srEmail','srPass'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    authTab('signin');
+  } catch(e) {
+    appShowAuthError(friendlyAuthError(e));
+  } finally {
+    btn.classList.remove('auth-busy'); btn.textContent = 'Request Account';
+  }
+}
 function appSignOut() {
   showModal('Sign Out?', 'Your work is already saved to the cloud. Sign out now?', null, [
     { label: 'Sign Out', cls: 'btn-danger', cb: function() { closeModal(); logAct('logout', 'Signed out'); if (window.FB) window.FB.signOutUser(); } },
@@ -5628,12 +5702,13 @@ async function appOnLogin(user, profile) {
   currentUser = { uid: user.uid, email: user.email };
   currentProfile = profile;
   isAdminAccount = !!(profile && profile.role === 'superadmin') || (window.FB && window.FB.isOwnerEmail && window.FB.isOwnerEmail(user.email));
+  var isApprover = !isAdminAccount && !!(profile && profile.canApprove);
 
   var initials = ((profile && profile.displayName) || user.email || '?').trim().charAt(0).toUpperCase();
   setText('userAvatar', initials || '?');
   setText('userName', (profile && profile.displayName) || user.email);
-  setText('userRole', isAdminAccount ? 'Super-admin' : 'User');
-  document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = isAdminAccount ? '' : 'none'; });
+  setText('userRole', isAdminAccount ? 'Super-admin' : (isApprover ? 'Approver' : 'User'));
+  document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = (isAdminAccount || isApprover) ? '' : 'none'; });
 
   stateLoaded = false;
   setSaveLabel('Loading…');
@@ -5670,7 +5745,7 @@ function appOnLogout() {
   studentDictCache = {}; studentDictLoaded = false;
   rows = []; selectedRows.clear(); activeRowId = null; duplicateIds.clear(); prevDupeCount = 0;
   fsRoot = { name:'root', type:'folder', children:[], id:'root' }; curFolderId = 'root';
-  recycleBin = []; courseDict = {}; adminUsersCache = []; adminActivityCache = [];
+  recycleBin = []; courseDict = {}; adminUsersCache = []; adminActivityCache = []; adminRequestsCache = []; _adminUserFilter = 'all';
   unifiedFolders = []; unifiedFolderFilesCache = {}; unifiedSubfoldersCache = {}; currentUnifiedFolderId = null; currentUFSubfolderId = null; filesTab = 'myfiles';
   ['courseCode','courseTitle','examPrefix','numScripts','matricPrefix'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   try { renderTable(); updateStats(); } catch (e) {}
@@ -5689,60 +5764,133 @@ function logAct(action, detail) {
 
 // ─── ADMIN CONSOLE ────────────────────────────────
 function renderAdmin() {
-  if (!isAdminAccount) {
-    document.getElementById('adminUserRows').innerHTML = '<tr><td colspan="6" class="admin-empty">Access denied.</td></tr>';
-    document.getElementById('adminStats').innerHTML = '';
+  var canApprove = isAdminAccount || (currentProfile && currentProfile.canApprove);
+  if (!canApprove) {
+    var rows = document.getElementById('adminUserRows');
+    if (rows) rows.innerHTML = '<tr><td colspan="6" class="admin-empty">Access denied.</td></tr>';
+    var stats = document.getElementById('adminStats');
+    if (stats) stats.innerHTML = '';
     return;
   }
-  if (!adminUsersCache.length && !adminActivityCache.length) { adminRefresh(); return; }
-  renderAdminStats(); renderAdminUsers(); renderAdminActivity();
+  if (!adminUsersCache.length && !adminActivityCache.length && !adminRequestsCache.length) { adminRefresh(); return; }
+  if (isAdminAccount) { renderAdminStats(); renderAdminUsers(); renderAdminActivity(); }
+  renderAdminRequests();
+  updateAdminRequestBadge();
 }
 async function adminRefresh() {
-  if (!isAdminAccount) return;
-  document.getElementById('adminUserRows').innerHTML = '<tr><td colspan="6" class="admin-empty">Loading users…</td></tr>';
-  document.getElementById('adminActivityList').innerHTML = '<div class="admin-empty">Loading activity…</div>';
-  try { adminUsersCache = await window.FB.listUsers(); }
-  catch (e) { adminUsersCache = []; toast('Could not load users: ' + (e && e.message ? e.message : 'error'), 'error'); }
-  try { adminActivityCache = await window.FB.listActivity(200); }
-  catch (e) { adminActivityCache = []; }
-  renderAdminStats(); renderAdminUsers(); renderAdminActivity();
+  var canApprove = isAdminAccount || (currentProfile && currentProfile.canApprove);
+  if (!canApprove) return;
+  if (isAdminAccount) {
+    var rows = document.getElementById('adminUserRows');
+    if (rows) rows.innerHTML = '<tr><td colspan="6" class="admin-empty">Loading users…</td></tr>';
+    var actList = document.getElementById('adminActivityList');
+    if (actList) actList.innerHTML = '<div class="admin-empty">Loading activity…</div>';
+  }
+  var reqList = document.getElementById('adminRequestsList');
+  if (reqList) reqList.innerHTML = '<div class="admin-empty">Loading requests…</div>';
+  if (isAdminAccount) {
+    try { adminUsersCache = await window.FB.listUsers(); }
+    catch (e) { adminUsersCache = []; toast('Could not load users: ' + (e && e.message ? e.message : 'error'), 'error'); }
+    try { adminActivityCache = await window.FB.listActivity(200); }
+    catch (e) { adminActivityCache = []; }
+  }
+  try { adminRequestsCache = await window.FB.listPendingRequests(); }
+  catch (e) { adminRequestsCache = []; }
+  if (isAdminAccount) { renderAdminStats(); renderAdminUsers(); renderAdminActivity(); }
+  renderAdminRequests();
+  updateAdminRequestBadge();
 }
 function adminTab(which) {
-  var u = which === 'users';
-  document.getElementById('atUsers').classList.toggle('active', u);
-  document.getElementById('atActivity').classList.toggle('active', !u);
-  document.getElementById('adminUsers').classList.toggle('active', u);
-  document.getElementById('adminActivity').classList.toggle('active', !u);
+  ['users','requests','activity'].forEach(function(t) {
+    var key = t.charAt(0).toUpperCase() + t.slice(1);
+    var tab = document.getElementById('at' + key);
+    var sec = document.getElementById('admin' + key);
+    if (tab) tab.classList.toggle('active', t === which);
+    if (sec) sec.classList.toggle('active', t === which);
+  });
 }
 function renderAdminStats() {
-  var total = adminUsersCache.length;
+  var active = adminUsersCache.filter(function(u) { return !u.disabled && u.status !== 'pending' && u.status !== 'rejected'; }).length;
   var admins = adminUsersCache.filter(function(u) { return u.role === 'superadmin'; }).length;
-  var disabled = adminUsersCache.filter(function(u) { return u.disabled; }).length;
+  var approvers = adminUsersCache.filter(function(u) { return u.canApprove && u.role !== 'superadmin'; }).length;
   var docs = adminUsersCache.reduce(function(a, u) { return a + ((u.stats && u.stats.docs) || 0); }, 0);
-  function st(n, l) { return '<div class="admin-stat"><div class="n">' + n + '</div><div class="l">' + l + '</div></div>'; }
-  document.getElementById('adminStats').innerHTML = st(total, 'Total Users') + st(admins, 'Super-admins') + st(total - disabled, 'Active') + st(docs, 'Documents');
+  var pending = adminRequestsCache.length;
+  function st(n, l, col) { return '<div class="admin-stat"><div class="n" style="color:' + (col || 'var(--accent)') + '">' + n + '</div><div class="l">' + l + '</div></div>'; }
+  document.getElementById('adminStats').innerHTML =
+    st(active, 'Active Users') +
+    st(pending, 'Pending Requests', pending > 0 ? 'var(--orange)' : 'var(--green)') +
+    st(admins, 'Super-admins', 'var(--accent2)') +
+    st(approvers, 'Delegated Approvers', 'var(--green)') +
+    st(docs, 'Documents', 'var(--accent3)');
 }
 function renderAdminUsers() {
   var q = (document.getElementById('adminUserSearch').value || '').trim().toLowerCase();
-  var list = adminUsersCache.filter(function(u) { return !q || (u.email || '').toLowerCase().indexOf(q) !== -1 || (u.displayName || '').toLowerCase().indexOf(q) !== -1; });
+  // build filter bar
+  var filterCounts = { all: adminUsersCache.length, active: 0, pending: 0, disabled: 0, rejected: 0 };
+  adminUsersCache.forEach(function(u) {
+    if (u.status === 'pending') filterCounts.pending++;
+    else if (u.status === 'rejected') filterCounts.rejected++;
+    else if (u.disabled) filterCounts.disabled++;
+    else filterCounts.active++;
+  });
+  var filterBarHtml = '<div class="admin-filter-bar" id="adminUserFilterBar">' +
+    ['all','active','pending','disabled','rejected'].map(function(f) {
+      var label = f.charAt(0).toUpperCase() + f.slice(1);
+      return '<button class="filter-btn' + (_adminUserFilter === f ? ' active' : '') + '" onclick="_setAdminUserFilter(\'' + f + '\')">' + label + ' (' + filterCounts[f] + ')</button>';
+    }).join('') + '</div>';
+  var existingBar = document.getElementById('adminUserFilterBar');
+  if (existingBar) existingBar.outerHTML = filterBarHtml;
+  else {
+    var tb2 = document.getElementById('adminUserRows');
+    if (tb2) tb2.closest('.admin-table-wrap').insertAdjacentHTML('beforebegin', filterBarHtml);
+  }
+  var list = adminUsersCache.filter(function(u) {
+    if (q && (u.email || '').toLowerCase().indexOf(q) === -1 && (u.displayName || '').toLowerCase().indexOf(q) === -1) return false;
+    if (_adminUserFilter === 'active')   return !u.disabled && u.status !== 'pending' && u.status !== 'rejected';
+    if (_adminUserFilter === 'pending')  return u.status === 'pending';
+    if (_adminUserFilter === 'disabled') return u.disabled;
+    if (_adminUserFilter === 'rejected') return u.status === 'rejected';
+    return true;
+  });
   list.sort(function(a, b) { return (a.displayName || a.email || '').localeCompare(b.displayName || b.email || ''); });
   var tb = document.getElementById('adminUserRows');
   if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="admin-empty">No users found.</td></tr>'; return; }
   tb.innerHTML = list.map(function(u) {
     var isSelf = currentUser && u.uid === currentUser.uid;
-    var rolePill = u.role === 'superadmin' ? '<span class="pill pill-admin">Super-admin</span>' : '<span class="pill pill-user">User</span>';
-    var statusPill = u.disabled ? '<span class="pill pill-disabled">Disabled</span>' : '<span class="pill pill-active">Active</span>';
+    var isPending  = u.status === 'pending';
+    var isRejected = u.status === 'rejected';
+    var rolePill = u.role === 'superadmin'
+      ? '<span class="pill pill-admin">Super-admin</span>'
+      : (u.canApprove ? '<span class="pill pill-approver">Approver</span>' : '<span class="pill pill-user">User</span>');
+    var statusPill = isPending  ? '<span class="pill pill-pending">Pending</span>'
+      : isRejected ? '<span class="pill pill-rejected">Rejected</span>'
+      : u.disabled ? '<span class="pill pill-disabled">Disabled</span>'
+      : '<span class="pill pill-active">Active</span>';
     var docs = (u.stats && u.stats.docs != null) ? u.stats.docs : '—';
     var mats = (u.stats && u.stats.mats != null) ? (' <span style="color:var(--text3)">• ' + u.stats.mats + ' mat.</span>') : '';
-    var last = u.lastLogin ? timeAgo(u.lastLogin) : '—';
-    var em = escAttr(u.email);
-    var acts = '<div class="row-actions">' +
-      '<button class="mini-btn" onclick="adminResetPassword(\'' + em + '\')">Reset PW</button>' +
-      '<button class="mini-btn" onclick="adminViewUserDocs(\'' + u.uid + '\',\'' + em + '\')">&#128196; Docs</button>' +
-      (isSelf ? '' : '<button class="mini-btn ' + (u.disabled ? 'good' : 'danger') + '" onclick="adminToggleDisable(\'' + u.uid + '\',' + (u.disabled ? 'true' : 'false') + ',\'' + em + '\')">' + (u.disabled ? 'Enable' : 'Disable') + '</button>') +
-      (isSelf ? '' : '<button class="mini-btn" onclick="adminSetRole(\'' + u.uid + '\',\'' + (u.role || 'user') + '\',\'' + em + '\')">' + (u.role === 'superadmin' ? 'Make User' : 'Make Admin') + '</button>') +
-      (isSelf ? '' : '<button class="mini-btn danger" onclick="adminDeleteData(\'' + u.uid + '\',\'' + em + '\')">Wipe</button>') +
-      '</div>';
+    var last = u.lastLogin ? timeAgo(u.lastLogin) : (isPending ? '<span style="color:var(--orange)">Awaiting approval</span>' : '—');
+    var em  = escAttr(u.email);
+    var uid = escAttr(u.uid);
+    var acts = '<div class="row-actions">';
+    if (isPending) {
+      acts += '<button class="mini-btn good" onclick="adminApproveUser(\'' + uid + '\',\'' + em + '\')">&#10003; Approve</button>';
+      acts += '<button class="mini-btn danger" onclick="adminRejectUser(\'' + uid + '\',\'' + em + '\')">&#10005; Reject</button>';
+    } else if (isRejected) {
+      acts += '<button class="mini-btn good" onclick="adminApproveUser(\'' + uid + '\',\'' + em + '\')">&#8617; Re-approve</button>';
+      acts += (!isSelf ? '<button class="mini-btn danger" onclick="adminDeleteData(\'' + uid + '\',\'' + em + '\')">Wipe</button>' : '');
+    } else {
+      acts += '<button class="mini-btn" onclick="adminResetPassword(\'' + em + '\')">Reset PW</button>';
+      acts += '<button class="mini-btn" onclick="adminViewUserDocs(\'' + uid + '\',\'' + em + '\')">&#128196; Docs</button>';
+      if (!isSelf) {
+        acts += '<button class="mini-btn ' + (u.disabled ? 'good' : 'danger') + '" onclick="adminToggleDisable(\'' + uid + '\',' + (u.disabled ? 'true' : 'false') + ',\'' + em + '\')">' + (u.disabled ? 'Enable' : 'Disable') + '</button>';
+        if (u.role !== 'superadmin') {
+          acts += '<button class="mini-btn" onclick="adminToggleCanApprove(\'' + uid + '\',' + (u.canApprove ? 'true' : 'false') + ',\'' + em + '\')">' + (u.canApprove ? '&#8722; Revoke Approver' : '+ Delegate Approver') + '</button>';
+        }
+        acts += '<button class="mini-btn" onclick="adminSetRole(\'' + uid + '\',\'' + (u.role || 'user') + '\',\'' + em + '\')">' + (u.role === 'superadmin' ? 'Make User' : 'Make Admin') + '</button>';
+        acts += '<button class="mini-btn danger" onclick="adminDeleteData(\'' + uid + '\',\'' + em + '\')">Wipe</button>';
+      }
+    }
+    acts += '</div>';
     return '<tr>' +
       '<td><div style="font-weight:600">' + escH(u.displayName || '—') + (isSelf ? ' <span class="pill pill-user">you</span>' : '') + '</div><div style="font-size:0.7rem;color:var(--text2)">' + escH(u.email || '') + '</div></td>' +
       '<td>' + rolePill + '</td><td>' + statusPill + '</td>' +
@@ -5750,6 +5898,118 @@ function renderAdminUsers() {
       '<td style="font-size:0.72rem;color:var(--text2)">' + last + '</td>' +
       '<td>' + acts + '</td></tr>';
   }).join('');
+}
+function _setAdminUserFilter(f) { _adminUserFilter = f; renderAdminUsers(); }
+function updateAdminRequestBadge() {
+  var el = document.getElementById('reqBadge');
+  if (el) el.textContent = adminRequestsCache.length > 0 ? String(adminRequestsCache.length) : '';
+}
+function renderAdminRequests() {
+  var el = document.getElementById('adminRequestsList');
+  if (!el) return;
+  var canManage = isAdminAccount || (currentProfile && currentProfile.canApprove);
+  if (!canManage) { el.innerHTML = '<div class="admin-empty">Access denied.</div>'; return; }
+  var q = ((document.getElementById('adminReqSearch') || {}).value || '').trim().toLowerCase();
+  var approveAllBtn = document.getElementById('approveAllBtn');
+  if (approveAllBtn) approveAllBtn.style.display = adminRequestsCache.length > 0 ? '' : 'none';
+  var list = adminRequestsCache.filter(function(u) {
+    return !q || (u.email || '').toLowerCase().indexOf(q) !== -1 || (u.displayName || '').toLowerCase().indexOf(q) !== -1;
+  });
+  if (!list.length) {
+    el.innerHTML = '<div class="admin-empty">No pending account requests' + (q ? ' matching "' + escH(q) + '"' : '') + '.</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(u) {
+    var ts = u.requestedAt ? timeAgo(u.requestedAt) : (u.createdAt ? timeAgo(u.createdAt) : '—');
+    var uid = escAttr(u.uid);
+    var em  = escAttr(u.email);
+    return '<div class="activity-item">' +
+      '<div class="act-icon" style="background:rgba(255,149,0,0.15);color:var(--orange);">&#9993;</div>' +
+      '<div class="act-main"><div><span class="act-who">' + escH(u.displayName || '—') + '</span> ' +
+      '<span style="font-size:0.7rem;color:var(--text3);font-family:var(--mono)">' + escH(u.email || '') + '</span></div>' +
+      '<div style="font-size:0.7rem;color:var(--text3)">Requested ' + ts + '</div></div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+        '<button class="mini-btn good" onclick="adminApproveUser(\'' + uid + '\',\'' + em + '\')">&#10003; Approve</button>' +
+        '<button class="mini-btn danger" onclick="adminRejectUser(\'' + uid + '\',\'' + em + '\')">&#10005; Reject</button>' +
+      '</div></div>';
+  }).join('');
+}
+async function adminApproveUser(uid, email) {
+  try {
+    await window.FB.approveUser(uid);
+    logAct('admin_approve_user', 'Approved account: ' + email);
+    toast('Account approved: ' + email, 'success');
+    var idx = adminRequestsCache.findIndex(function(u) { return u.uid === uid; });
+    if (idx >= 0) {
+      var approved = adminRequestsCache.splice(idx, 1)[0];
+      approved.status = 'active';
+      var existing = adminUsersCache.findIndex(function(u) { return u.uid === uid; });
+      if (existing >= 0) adminUsersCache[existing].status = 'active';
+      else adminUsersCache.push(approved);
+    } else {
+      var inUsers = adminUsersCache.findIndex(function(u) { return u.uid === uid; });
+      if (inUsers >= 0) adminUsersCache[inUsers].status = 'active';
+    }
+    renderAdminRequests(); renderAdminUsers(); renderAdminStats(); updateAdminRequestBadge();
+  } catch(e) { toast('Failed to approve: ' + (e && e.message ? e.message : 'error'), 'error'); }
+}
+async function adminApproveAllPending() {
+  var list = adminRequestsCache.slice();
+  if (!list.length) { toast('No pending requests', 'warn'); return; }
+  showModal('Approve All?', 'Approve all ' + list.length + ' pending account request(s)?', null, [
+    { label: 'Approve All', cls: 'btn-success', cb: async function() {
+      closeModal();
+      for (var i = 0; i < list.length; i++) {
+        try { await adminApproveUser(list[i].uid, list[i].email); } catch(e) {}
+      }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+function adminRejectUser(uid, email) {
+  showModal('Reject Account Request?', 'Provide an optional reason. The user will see this message.', { type: 'text', placeholder: 'Rejection reason (optional)' }, [
+    { label: 'Reject', cls: 'btn-danger', cb: async function() {
+      var reason = (document.getElementById('modalTextInput') ? document.getElementById('modalTextInput').value.trim() : '');
+      try {
+        await window.FB.rejectUser(uid, reason);
+        logAct('admin_reject_user', 'Rejected account: ' + email + (reason ? ' — ' + reason : ''));
+        toast('Request rejected: ' + email, 'warn');
+        var idx = adminRequestsCache.findIndex(function(u) { return u.uid === uid; });
+        if (idx >= 0) {
+          var rejected = adminRequestsCache.splice(idx, 1)[0];
+          rejected.status = 'rejected'; rejected.rejectionReason = reason;
+          var existing = adminUsersCache.findIndex(function(u) { return u.uid === uid; });
+          if (existing >= 0) { adminUsersCache[existing].status = 'rejected'; adminUsersCache[existing].rejectionReason = reason; }
+          else adminUsersCache.push(rejected);
+        }
+        closeModal(); renderAdminRequests(); renderAdminUsers(); renderAdminStats(); updateAdminRequestBadge();
+      } catch(e) { toast('Failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
+    }},
+    { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+  ]);
+}
+function adminToggleCanApprove(uid, currentlyHas, email) {
+  var newVal = !currentlyHas;
+  var verb = newVal ? 'Grant' : 'Revoke';
+  showModal(verb + ' Approver Rights?',
+    newVal ? ('Grant ' + email + ' the ability to approve and reject account requests on your behalf?')
+           : ('Remove account-approval rights from ' + email + '?'),
+    null,
+    [
+      { label: verb, cls: newVal ? 'btn-primary' : 'btn-danger', cb: async function() {
+        try {
+          await window.FB.setCanApprove(uid, newVal);
+          logAct('admin_delegate', (newVal ? 'Granted' : 'Revoked') + ' approver rights: ' + email);
+          closeModal();
+          var u = adminUsersCache.find(function(x) { return x.uid === uid; });
+          if (u) u.canApprove = newVal;
+          renderAdminUsers();
+          toast((newVal ? 'Approver rights granted to ' : 'Approver rights revoked from ') + email, 'success');
+        } catch(e) { toast('Failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
+      }},
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]
+  );
 }
 function renderAdminActivity() {
   var q = (document.getElementById('adminActSearch').value || '').trim().toLowerCase();
@@ -6124,6 +6384,8 @@ if (!CONFIGURED) {
     try { snap = await getDoc(ref); } catch (e) {}
     if (snap && snap.exists()) {
       const data = snap.data();
+      // Pending/rejected users must not access the app — return data so caller can gate on status
+      if (data.status === 'pending' || data.status === 'rejected') return data;
       const patch = { lastLogin: serverTimestamp() };
       // self-heal: keep the configured owner as super-admin no matter what
       if (isOwnerEmail(user.email) && data.role !== 'superadmin') { patch.role = 'superadmin'; patch.disabled = false; }
@@ -6133,7 +6395,7 @@ if (!CONFIGURED) {
     }
     // No profile yet — only the configured OWNER may self-provision (bootstrap).
     if (isOwnerEmail(user.email)) {
-      const prof = { email: user.email, displayName: pendingOwnerName || user.displayName || user.email.split('@')[0], role: 'superadmin', disabled: false, createdAt: serverTimestamp(), createdBy: 'self', lastLogin: serverTimestamp() };
+      const prof = { email: user.email, displayName: pendingOwnerName || user.displayName || user.email.split('@')[0], role: 'superadmin', disabled: false, status: 'active', createdAt: serverTimestamp(), createdBy: 'self', lastLogin: serverTimestamp() };
       pendingOwnerName = null;
       await setDoc(ref, prof);
       return prof;
@@ -6146,6 +6408,17 @@ if (!CONFIGURED) {
     let profile = null;
     try { profile = await ensureProfileForLogin(user); } catch (e) { console.warn(e); }
     if (!profile) { await signOut(auth); if (window.appShowAuthError) window.appShowAuthError('Your account is not set up. Please ask your administrator to create your account.'); return; }
+    if (profile.status === 'pending') {
+      await signOut(auth);
+      if (window.appShowAuthOk) window.appShowAuthOk('Your account is awaiting administrator approval. You will be able to sign in once it is activated.');
+      return;
+    }
+    if (profile.status === 'rejected') {
+      await signOut(auth);
+      var reason = profile.rejectionReason ? ' Reason: ' + profile.rejectionReason : '';
+      if (window.appShowAuthError) window.appShowAuthError('Your account request was not approved.' + reason + ' Contact the administrator if you believe this is an error.');
+      return;
+    }
     if (profile.disabled) { await signOut(auth); if (window.appShowAuthError) window.appShowAuthError('This account has been disabled. Contact your administrator.'); return; }
     lastSavedHash = null;
     if (window.appOnLogin) window.appOnLogin(user, profile);
@@ -6222,19 +6495,63 @@ if (!CONFIGURED) {
     // ── admin: users ──
     async listUsers() {
       const snap = await getDocs(collection(db, 'users'));
-      const out = []; snap.forEach(d => { const x = d.data(); out.push({ uid: d.id, email: x.email, displayName: x.displayName, role: x.role || 'user', disabled: !!x.disabled, stats: x.stats || null, lastLogin: x.lastLogin && x.lastLogin.toMillis ? x.lastLogin.toMillis() : null, createdAt: x.createdAt && x.createdAt.toMillis ? x.createdAt.toMillis() : null }); });
+      const out = [];
+      snap.forEach(d => {
+        const x = d.data();
+        out.push({
+          uid: d.id, email: x.email, displayName: x.displayName,
+          role: x.role || 'user', disabled: !!x.disabled,
+          status: x.status || 'active', canApprove: !!x.canApprove,
+          rejectionReason: x.rejectionReason || '',
+          stats: x.stats || null,
+          lastLogin:   x.lastLogin   && x.lastLogin.toMillis   ? x.lastLogin.toMillis()   : null,
+          createdAt:   x.createdAt   && x.createdAt.toMillis   ? x.createdAt.toMillis()   : null,
+          requestedAt: x.requestedAt && x.requestedAt.toMillis ? x.requestedAt.toMillis() : null
+        });
+      });
       return out;
     },
     async createUserAccount({ email, password, displayName, role }) {
       const sec = getSecondary();
       const cred = await createUserWithEmailAndPassword(sec, email, password);
       const uid = cred.user.uid;
-      await setDoc(doc(db, 'users', uid), { email, displayName: displayName || email.split('@')[0], role: role === 'superadmin' ? 'superadmin' : 'user', disabled: false, createdAt: serverTimestamp(), createdBy: auth.currentUser ? auth.currentUser.email : 'admin' });
+      await setDoc(doc(db, 'users', uid), { email, displayName: displayName || email.split('@')[0], role: role === 'superadmin' ? 'superadmin' : 'user', disabled: false, status: 'active', canApprove: false, createdAt: serverTimestamp(), createdBy: auth.currentUser ? auth.currentUser.email : 'admin' });
       try { await signOut(sec); } catch (e) {}
       return uid;
     },
-    setDisabled: (uid, disabled) => setDoc(doc(db, 'users', uid), { disabled: !!disabled }, { merge: true }),
-    setRole:     (uid, role)     => setDoc(doc(db, 'users', uid), { role: role === 'superadmin' ? 'superadmin' : 'user' }, { merge: true }),
+    setDisabled:   (uid, disabled)   => setDoc(doc(db, 'users', uid), { disabled: !!disabled }, { merge: true }),
+    setRole:       (uid, role)       => setDoc(doc(db, 'users', uid), { role: role === 'superadmin' ? 'superadmin' : 'user' }, { merge: true }),
+    approveUser:   (uid)             => setDoc(doc(db, 'users', uid), { status: 'active', approvedAt: serverTimestamp() }, { merge: true }),
+    rejectUser:    (uid, reason)     => setDoc(doc(db, 'users', uid), { status: 'rejected', rejectedAt: serverTimestamp(), rejectionReason: reason || '' }, { merge: true }),
+    setCanApprove: (uid, canApprove) => setDoc(doc(db, 'users', uid), { canApprove: !!canApprove }, { merge: true }),
+    async listPendingRequests() {
+      const snap = await getDocs(collection(db, 'users'));
+      const out = [];
+      snap.forEach(d => {
+        const x = d.data();
+        if (x.status === 'pending') {
+          out.push({ uid: d.id, email: x.email, displayName: x.displayName, role: x.role || 'user', status: 'pending',
+            requestedAt: x.requestedAt && x.requestedAt.toMillis ? x.requestedAt.toMillis() : null,
+            createdAt:   x.createdAt   && x.createdAt.toMillis   ? x.createdAt.toMillis()   : null });
+        }
+      });
+      out.sort((a, b) => (a.requestedAt || 0) - (b.requestedAt || 0));
+      return out;
+    },
+    async registerNewUser(name, email, pass) {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      const uid  = cred.user.uid;
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          email, displayName: name || email.split('@')[0],
+          role: 'user', disabled: false, status: 'pending', canApprove: false,
+          createdAt: serverTimestamp(), createdBy: 'self-register', requestedAt: serverTimestamp()
+        });
+      } finally {
+        try { await signOut(auth); } catch(e2) {}
+      }
+      return { uid };
+    },
     async deleteUserData(uid) {
       const sub = await getDocs(collection(db, 'users', uid, 'state'));
       const dels = []; sub.forEach(d => dels.push(deleteDoc(d.ref)));
