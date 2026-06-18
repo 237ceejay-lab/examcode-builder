@@ -840,6 +840,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     <div class="sec-head">Export</div>
     <button class="btn btn-success btn-full" onclick="exportCSV()">&#11015; Export CSV</button>
     <button class="btn btn-ghost btn-full btn-sm" style="margin-top:4px" onclick="saveToFiles()">&#128190; Save to Files</button>
+    <button class="btn btn-import btn-full btn-sm" style="margin-top:4px" onclick="shareCurrentBuild()">&#128257; Share CSV</button>
   </div>
 
   <div class="matric-area">
@@ -2923,6 +2924,36 @@ function exportCSV() {
     return;
   }
   doExport(title);
+}
+
+async function shareCurrentBuild() {
+  if (!rows.length) { toast('No data to share', 'warn'); return; }
+  var code = gv('courseCode') || 'course';
+  var title = gv('courseTitle') || 'export';
+  var fname = code + '_' + title.replace(/\s+/g, '_') + '.csv';
+  var csv = rows.map(function(r) { return r.matricule + ',' + r.examCode; }).join('\n');
+  var shareTitle = fname;
+  var shareText = csv;
+
+  // Try file share first (mobile: WhatsApp, Files, etc.)
+  if (navigator.share) {
+    try {
+      var fileObj = new File([csv], fname, { type: 'text/csv' });
+      if (navigator.canShare && navigator.canShare({ files: [fileObj] })) {
+        await navigator.share({ files: [fileObj], title: shareTitle });
+        return;
+      }
+    } catch (e) { if (e.name === 'AbortError') return; }
+
+    // Text share fallback
+    try {
+      var short = csv.length > 2000 ? csv.substring(0, 2000) + '\n…' : csv;
+      await navigator.share({ title: shareTitle, text: short });
+      return;
+    } catch (e) { if (e.name === 'AbortError') return; }
+  }
+
+  showShareFallbackDialog(shareTitle, shareText, [{ name: fname, content: csv }]);
 }
 
 function saveToFiles(silent) {
