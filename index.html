@@ -814,13 +814,13 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <div class="fgrp"><div class="flabel"># Scripts</div><input class="finput" id="numScripts" type="number" min="1" max="9999" placeholder="100" oninput="updatePreview()"></div>
     </div>
     <div class="fgrp"><div class="flabel">Preview</div><div class="preview-box" id="previewBox">---</div></div>
-    <button class="btn btn-primary btn-full" onclick="generateTable()">&#9654; Generate Table</button>
     <div class="sec-head">Matricule Prefix</div>
     <div class="fgrp">
       <div class="flabel">Common First Characters</div>
       <input class="finput" id="matricPrefix" placeholder="UBa25R0" maxlength="14" oninput="updatePreview()">
     </div>
     <div style="font-size:0.68rem;color:var(--text3);line-height:1.4;">Speak only the last digits; prefix prepended automatically.</div>
+    <button class="btn btn-primary btn-full" onclick="generateTable()" style="margin-top:8px;">&#9654; Generate Table</button>
     <div class="sec-head">Voice</div>
     <div class="fgrp">
       <div class="flabel">Silence Timeout</div>
@@ -889,7 +889,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       </div>
       <button class="btn btn-ghost btn-sm" id="selAllBtn" onclick="toggleSelectAll()">&#9745; All</button>
       <button class="btn btn-orange btn-sm" id="createFolderBtn" onclick="createFolder()">+ Folder</button>
-      <button class="btn btn-orange btn-sm" id="createUnifiedFolderBtn" onclick="createUnifiedFolder()" style="display:none;">+ Unified</button>
+      <button class="btn btn-orange btn-sm" id="createUnifiedFolderBtn" onclick="createUnifiedFolder()" style="display:none;">+ Public</button>
       <button class="btn btn-orange btn-sm" id="createUFSubfolderBtn" onclick="createUFSubfolder()" style="display:none;">+ Folder</button>
       <button class="btn btn-import btn-sm" id="importFileBtn" onclick="importFile()">&#11014; Import CSV</button>
       <button class="btn btn-download btn-sm" onclick="downloadSelected()">&#11015; Download</button>
@@ -898,12 +898,12 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     </div>
     <div class="files-tabs">
       <button class="files-tab active" id="tabMyFiles" onclick="switchFilesTab('myfiles')">&#128193; My Files</button>
-      <button class="files-tab" id="tabUnified" onclick="switchFilesTab('unified')">&#127760; Unified Folders</button>
+      <button class="files-tab" id="tabUnified" onclick="switchFilesTab('unified')">&#127760; Public Folders</button>
     </div>
     <div class="sel-action-bar" id="selActionBar">
       <span class="sel-count-badge" id="selCountBadge">0 selected</span>
       <button class="btn btn-primary btn-sm" id="selMoveBtn" onclick="moveSelected()" style="display:none;">&#8594; Move to Folder</button>
-      <button class="btn btn-ghost btn-sm" id="moveToUnifiedBtn" onclick="moveToUnifiedFolderDialog()" style="display:none;">&#127760; Move to Unified Folder</button>
+      <button class="btn btn-ghost btn-sm" id="moveToUnifiedBtn" onclick="moveToUnifiedFolderDialog()" style="display:none;">&#127760; Move to Public Folder</button>
       <button class="btn btn-ghost btn-sm" id="selShareBtn" onclick="shareSelected()" style="display:none;">&#128279; Share</button>
       <button class="btn btn-download btn-sm" id="selDownloadBtn" onclick="selDownloadAction()" style="display:none;">&#11015; Download</button>
       <button class="btn btn-ghost btn-sm" id="selUFShareBtn" onclick="shareSelectedUFFolders()" style="display:none;">&#128279; Share</button>
@@ -1101,7 +1101,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <div class="man-p">The <strong>Overview</strong> page is your home screen. It shows a summary of all your work at a glance.</div>
       <div class="man-steps">
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Quick Actions:</strong> Buttons to jump directly to the Builder, Files, or Lookup pages.</div></div>
-        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>System Overview (KPIs):</strong> Total files, total matricules entered, folders, and unified folders you have access to.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>System Overview (KPIs):</strong> Total files, total matricules entered, folders, and public folders you have access to.</div></div>
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Matricule Patterns:</strong> A breakdown of student levels detected across all your saved files, based on their matricule prefix.</div></div>
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Recent Files:</strong> Your last-modified documents. Click any file to open it in the Builder.</div></div>
         <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>In-Progress Session:</strong> If the Builder has unsaved work, a <strong>Resume</strong> button appears here so you can return to it quickly.</div></div>
@@ -1244,13 +1244,13 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
     </div>
 
     <div class="man-card">
-      <div class="man-card-title">&#127760; Unified Folders Tab</div>
-      <div class="man-p">Unified Folders are <strong>shared workspaces</strong> that multiple users can contribute files to. They are commonly used by departments to collect exam sheets from several lecturers into one place.</div>
+      <div class="man-card-title">&#127760; Public Folders Tab</div>
+      <div class="man-p">Public Folders are <strong>shared workspaces</strong> that multiple users can contribute files to. They are commonly used by departments to collect exam sheets from several lecturers into one place.</div>
       <div class="man-steps">
-        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Joining a Unified Folder:</strong> Another user with access shares a link or folder ID with you. Open it from Files → Unified Folders.</div></div>
-        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Password-protected folders:</strong> Some Unified Folders require a password. Enter it when prompted.</div></div>
-        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Contributing a file:</strong> Select a file in My Files, then use the action bar's <strong>Move to Unified Folder</strong> button to send it there.</div></div>
-        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Opening from a Unified Folder:</strong> Files inside a Unified Folder open in the Builder just like your own files. Changes are saved back to the shared folder.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Joining a Public Folder:</strong> Another user with access shares a link or folder ID with you. Open it from Files → Public Folders.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Password-protected folders:</strong> Some Public Folders require a password. Enter it when prompted.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Contributing a file:</strong> Select a file in My Files, then use the action bar's <strong>Move to Public Folder</strong> button to send it there.</div></div>
+        <div class="man-step"><div class="man-num">&#8226;</div><div class="man-step-body"><strong>Opening from a Public Folder:</strong> Files inside a Public Folder open in the Builder just like your own files. Changes are saved back to the shared folder.</div></div>
       </div>
     </div>
 
@@ -1464,7 +1464,7 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
   <div class="ctx-item" onclick="ctxDownload()">&#11015; Download</div>
   <div class="ctx-item" onclick="ctxShare()">&#128279; Share</div>
   <div class="ctx-item" onclick="ctxMove()">&#8594; Move to Folder</div>
-  <div class="ctx-item" id="ctxMoveUnified" onclick="ctxMoveToUnified()" style="display:none;">&#127760; Move to Unified Folder</div>
+  <div class="ctx-item" id="ctxMoveUnified" onclick="ctxMoveToUnified()" style="display:none;">&#127760; Move to Public Folder</div>
   <div class="ctx-sep"></div>
   <div class="ctx-item danger" onclick="ctxDelete()">&#128465; Delete</div>
 </div>
@@ -1586,10 +1586,10 @@ var currentUnifiedFolderId = null;
 var unifiedFolderFilesCache = {};
 var unifiedCtxTargetId = null;
 var _openedFromUnifiedFolderCtx = null; // {folderId, fileId, fileName} when file opened from UF
-var selectedUnifiedFiles = new Set(); // selected file IDs in unified folder view
+var selectedUnifiedFiles = new Set(); // selected file IDs in public folder view
 var _modalFocusTimer = null;   // prevent focus-timer accumulation across showModal calls
 var _openFolderGuard = false;  // prevent re-entry on openUnifiedFolder
-var currentUFSubfolderId = null; // current subfolder within a unified folder (null = root)
+var currentUFSubfolderId = null; // current subfolder within a public folder (null = root)
 var unifiedSubfoldersCache = {}; // folderId -> [{ id, name, creatorUid, createdAt }]
 
 // ─── ONLINE / AUTH STATE ──────────────────────────
@@ -1789,7 +1789,7 @@ function applyLoadedState(d) {
       if (s.courseTitle) document.getElementById('courseTitle').value = s.courseTitle;
       if (s.examPrefix) document.getElementById('examPrefix').value = s.examPrefix;
       if (s.numScripts) document.getElementById('numScripts').value = s.numScripts;
-      if (s.matricPrefix) document.getElementById('matricPrefix').value = s.matricPrefix;
+      // matricPrefix intentionally not restored — user must enter it fresh each session
       if (s.silenceSlider) {
         document.getElementById('silenceSlider').value = s.silenceSlider;
         appliedSilenceMs = parseInt(s.silenceSlider) || 1000;
@@ -1833,31 +1833,37 @@ function escH(s) {
 
 // ─── SETUP / GENERATION ───────────────────────────
 function updatePreview() {
-  var pre = gv('examPrefix') || '??';
+  var pre = gv('examPrefix');  // may be empty — that's valid (no-prefix mode)
   var n = parseInt(gv('numScripts')) || 0;
+  var pad = Math.max(2, n > 0 ? String(n).length : 2);
   var pb = document.getElementById('previewBox');
-  if (pb) pb.textContent = n > 0 ? (pre + '01 to ' + pre + String(n).padStart(Math.max(2, String(n).length), '0')) : (pre + '01 to ...');
+  if (pb) pb.textContent = n > 0
+    ? (pre + '01' + ' → ' + pre + String(n).padStart(pad, '0'))
+    : (pre ? pre + '01 → …' : '01 → …');
   var chip = document.getElementById('pfxChipTxt');
   if (chip) chip.textContent = gv('matricPrefix') || '--';
   autoSaveDebounced();
 }
 
 function generateTable() {
-  var pre = gv('examPrefix');
+  var pre  = gv('examPrefix');  // empty string = no-prefix mode (codes: 01, 02, 03…)
+  var matPre = gv('matricPrefix');
   var n = parseInt(gv('numScripts'));
-  if (!pre) { toast('Enter exam code prefix', 'warn'); return; }
-  if (!n || n < 1) { toast('Enter number of scripts', 'warn'); return; }
+  if (!matPre) { toast('Enter the common first characters (Matricule Prefix) before generating', 'warn'); return; }
+  if (!n || n < 1) { toast('Enter the number of scripts', 'warn'); return; }
   if (rows.length === 0) { _buildRows(pre, n); return; }
   // Detect current prefix from first exam code
   var existingPre = rows[0].examCode.replace(/\d+$/, '');
   if (existingPre !== pre) {
-    showModal('Reset Table?', 'The prefix changed (' + existingPre + ' → ' + pre + ').\nThis will clear all existing matricules. Continue?', null, [
+    var oldLabel = existingPre || '(no prefix)';
+    var newLabel = pre        || '(no prefix)';
+    showModal('Reset Table?', 'The exam code prefix changed (' + oldLabel + ' → ' + newLabel + ').\nThis will clear all existing matricules. Continue?', null, [
       { label: 'Reset', cls: 'btn-danger', cb: function() { closeModal(); _buildRows(pre, n); } },
       { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
     ]);
     return;
   }
-  if (n === rows.length) { toast('Table already has ' + n + ' rows with prefix ' + pre, 'warn'); return; }
+  if (n === rows.length) { toast('Table already has ' + n + ' rows' + (pre ? ' with prefix ' + pre : ''), 'warn'); return; }
   if (n > rows.length) { _extendRows(pre, n); }
   else { _trimRows(pre, n); }
 }
@@ -1880,6 +1886,8 @@ function _buildRows(pre, n) {
   var code = gv('courseCode'), title = gv('courseTitle');
   if (code && title) { courseDict[code] = title; saveToStorage(); }
   document.getElementById('doneBar').style.display = 'flex';
+  var mpEl = document.getElementById('matricPrefix');
+  if (mpEl) { mpEl.value = ''; updatePreview(); }
 }
 
 function _extendRows(pre, n) {
@@ -2234,7 +2242,7 @@ function shiftSelectedRows(dir) {
 
 function insertRowBelow() {
   var idx = activeRowId ? rows.findIndex(function(r) { return r.id === activeRowId; }) : rows.length - 1;
-  var pre = gv('examPrefix') || 'XX';
+  var pre = gv('examPrefix');
   var n = rows.length + 1;
   var pad = Math.max(2, String(n).length);
   var nr = { id: genId(), examCode: pre + String(n).padStart(pad, '0'), matricule: '' };
@@ -2253,7 +2261,7 @@ function deleteSelectedRows() {
 }
 
 function reindexExamCodes() {
-  var pre = gv('examPrefix') || 'XX';
+  var pre = gv('examPrefix');
   var pad = Math.max(2, String(rows.length).length);
   rows.forEach(function(r, i) { r.examCode = pre + String(i + 1).padStart(pad, '0'); });
 }
@@ -2363,7 +2371,7 @@ async function _doFinish() {
       savedToUF = true;
     } catch(e) {
       _openedFromUnifiedFolderCtx = ufCtx; // restore context so user can retry
-      toast('Could not save to unified folder: ' + (e && e.message ? e.message : 'error'), 'error');
+      toast('Could not save to public folder: ' + (e && e.message ? e.message : 'error'), 'error');
       return; // abort — keep all row data intact
     }
   } else if (!ufCtx) {
@@ -2377,7 +2385,7 @@ async function _doFinish() {
   document.getElementById('doneBar').style.display = 'none';
   document.getElementById('previewBox').textContent = '---';
   saveToStorage();
-  toast(savedToUF ? 'Saved to unified folder. Ready for next course.' : 'Saved. Ready for next course.', 'success');
+  toast(savedToUF ? 'Saved to public folder. Ready for next course.' : 'Saved. Ready for next course.', 'success');
 }
 
 function discardDocument() {
@@ -2927,7 +2935,7 @@ function saveToFiles(silent) {
         var f = unifiedFolderFilesCache[ctx.folderId].find(function(ff) { return ff.id === ctx.fileId; });
         if (f) f.content = csv;
       }
-      if (!silent) toast('Saved to unified folder: ' + ctx.fileName, 'success');
+      if (!silent) toast('Saved to public folder: ' + ctx.fileName, 'success');
     }).catch(function(e) {
       if (!silent) toast('Could not save: ' + (e && e.message ? e.message : 'error'), 'error');
     });
@@ -3078,7 +3086,7 @@ function renderFilesPage() {
     var meta = ts ? new Date(ts).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' + new Date(ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
     var size = (item.type === 'file' && item.content) ? (item.content.length >= 1024 ? (item.content.length / 1024).toFixed(1) + ' KB' : item.content.length + ' B') : '';
     var metaStr = meta + (size ? ' &bull; ' + size : '');
-    // Show unified ctx option if unified folders exist
+    // Show unified ctx option if public folders exist
     var hasUnified = unifiedFolders.length > 0;
     return '<div class="file-card ' + (item.type === 'file' ? 'file-doc' : 'file-folder') + (sel ? ' selected' : '') + '" id="fc-' + item.id + '"' +
       ' onclick="fcClick(event,\'' + item.id + '\')"' +
@@ -3262,7 +3270,7 @@ function selDownloadAction() {
   if (filesTab === 'unified' && currentUnifiedFolderId && selectedUnifiedFiles.size > 0) {
     downloadSelectedUFFiles();
   } else if (filesTab === 'unified' && !currentUnifiedFolderId && selectedFiles.size > 0) {
-    // Download each selected unified folder as a ZIP
+    // Download each selected public folder as a ZIP
     var pending = Array.from(selectedFiles);
     pending.forEach(function(id) { downloadUnifiedFolder(id); });
   } else {
@@ -3271,14 +3279,14 @@ function selDownloadAction() {
 }
 
 async function shareSelectedUFFolders() {
-  // Share files from all selected unified folders (list page) OR selected files inside a folder
+  // Share files from all selected public folders (list page) OR selected files inside a folder
   if (filesTab === 'unified' && currentUnifiedFolderId && selectedUnifiedFiles.size > 0) {
     var folderId = currentUnifiedFolderId;
     var cache = unifiedFolderFilesCache[folderId] || [];
     var toShare = Array.from(selectedUnifiedFiles).map(function(id) { return cache.find(function(f) { return f.id === id; }); }).filter(Boolean);
     if (!toShare.length) { toast('No files selected', 'warn'); return; }
     var uf = unifiedFolders.find(function(f) { return f.id === folderId; }) || {};
-    var shareTitle = (uf.name || 'Unified Folder') + ' – ExamCode Builder';
+    var shareTitle = (uf.name || 'Public Folder') + ' – ExamCode Builder';
     var shareText = toShare.map(function(f) { return '📄 ' + f.name + '\n' + (f.content || ''); }).join('\n\n─────\n\n');
     if (!navigator.share) { showShareFallbackDialog(shareTitle, shareText, toShare); return; }
     try {
@@ -3610,12 +3618,12 @@ function renderBinPage() {
       '</div>' +
     '</div>';
 
-  // Async load unified folder bin items (visible to uploader + folder creator only)
+  // Async load public folder bin items (visible to uploader + folder creator only)
   if (currentUser && window.FB && window.FB.listDeletedSharedFolderFiles) {
     window.FB.listDeletedSharedFolderFiles(currentUser.uid).then(function(items) {
       var el = document.getElementById('ufBinRows');
       if (!el) return;
-      if (!items || !items.length) { el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);">No deleted unified folder files.</div>'; return; }
+      if (!items || !items.length) { el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);">No deleted public folder files.</div>'; return; }
       el.innerHTML = items.map(function(b) {
         var ts = b.deletedAt ? new Date(b.deletedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + new Date(b.deletedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '—';
         return '<div class="bin-row">' +
@@ -3630,7 +3638,7 @@ function renderBinPage() {
           '</div>' +
         '</div>';
       }).join('');
-    }).catch(function() { var el = document.getElementById('ufBinRows'); if (el) el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);">Could not load unified folder bin.</div>'; });
+    }).catch(function() { var el = document.getElementById('ufBinRows'); if (el) el.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);">Could not load public folder bin.</div>'; });
   }
 }
 
@@ -3639,7 +3647,7 @@ async function restoreUFBinItem(folderId, binItemId) {
     await window.FB.restoreSharedFolderFile(folderId, binItemId);
     delete unifiedFolderFilesCache[folderId];
     renderFilesPage(); updateBinCount();
-    toast('File restored to unified folder', 'success');
+    toast('File restored to public folder', 'success');
   } catch (e) { toast('Restore failed: ' + (e && e.message ? e.message : 'error'), 'error'); }
 }
 
@@ -3787,7 +3795,7 @@ async function uctxShare() {
   var files = await window.FB.getSharedFolderFiles(unifiedCtxTargetId);
   if (!files.length) { toast('No files in this folder', 'warn'); return; }
   var folder = unifiedFolders.find(function(f) { return f.id === unifiedCtxTargetId; }) || {};
-  var shareTitle = (folder.name || 'Unified Folder') + ' – ExamCode Builder';
+  var shareTitle = (folder.name || 'Public Folder') + ' – ExamCode Builder';
   var shareText = files.map(function(f) { return '📄 ' + f.name + '\n' + (f.content || ''); }).join('\n\n─────\n\n');
   if (!navigator.share) { showShareFallbackDialog(shareTitle, shareText, files); return; }
   try {
@@ -3846,7 +3854,7 @@ function updateSelActionBar() {
     [moveBtn, moveToUnifiedBtn, shareBtn, dlBtn, ufShareBtn, ufMoveBtn].forEach(function(b) { if (b) b.style.display = 'none'; });
   }
   if (ufCount > 0 && filesTab === 'unified' && currentUnifiedFolderId) {
-    // Inside a unified folder — files selected
+    // Inside a public folder — files selected
     bar.classList.add('visible');
     if (badge) badge.textContent = ufCount + ' file' + (ufCount !== 1 ? 's' : '') + ' selected';
     hideAll();
@@ -3854,7 +3862,7 @@ function updateSelActionBar() {
     if (ufMoveBtn) ufMoveBtn.style.display = '';
     if (ufShareBtn) ufShareBtn.style.display = '';
   } else if (count > 0 && filesTab === 'unified' && !currentUnifiedFolderId) {
-    // On unified folder list — folders selected
+    // On public folder list — folders selected
     bar.classList.add('visible');
     if (badge) badge.textContent = count + ' folder' + (count !== 1 ? 's' : '') + ' selected';
     hideAll();
@@ -3886,7 +3894,7 @@ function hashFolderPassword(password, salt) {
 async function loadUnifiedFolders() {
   if (!window.FB || !window.FB.listSharedFolders) return;
   try { unifiedFolders = await window.FB.listSharedFolders(); }
-  catch (e) { console.warn('Could not load unified folders', e); unifiedFolders = []; }
+  catch (e) { console.warn('Could not load public folders', e); unifiedFolders = []; }
 }
 
 async function loadUnifiedFolderFiles(folderId) {
@@ -4031,7 +4039,7 @@ function renderUnifiedFoldersPage() {
   var createUFSubBtn = document.getElementById('createUFSubfolderBtn');
 
   if (currentUnifiedFolderId) {
-    // Inside a unified folder: hide + Unified and top-level + Folder
+    // Inside a public folder: hide + Unified and top-level + Folder
     if (createUnifiedBtn) createUnifiedBtn.style.display = 'none';
     if (createFolderBtn) createFolderBtn.style.display = 'none';
     var uf = unifiedFolders.find(function(f) { return f.id === currentUnifiedFolderId; });
@@ -4046,7 +4054,7 @@ function renderUnifiedFoldersPage() {
         subName = sub ? escH(sub.name) : '?';
       }
       if (pc) {
-        pc.innerHTML = '<span class="crumb" onclick="navToUnifiedRoot()">&#127760; Unified Folders</span>' +
+        pc.innerHTML = '<span class="crumb" onclick="navToUnifiedRoot()">&#127760; Public Folders</span>' +
           '<span class="crumb-sep">/</span>' +
           '<span class="crumb" onclick="exitUFSubfolder()">' + ufName + '</span>' +
           '<span class="crumb-sep">/</span>' +
@@ -4056,7 +4064,7 @@ function renderUnifiedFoldersPage() {
       // UF root: show + Folder for creating subfolders
       if (createUFSubBtn) createUFSubBtn.style.display = '';
       if (pc) {
-        pc.innerHTML = '<span class="crumb" onclick="navToUnifiedRoot()">&#127760; Unified Folders</span>' +
+        pc.innerHTML = '<span class="crumb" onclick="navToUnifiedRoot()">&#127760; Public Folders</span>' +
           '<span class="crumb-sep">/</span>' +
           '<span>' + ufName + '</span>';
       }
@@ -4067,7 +4075,7 @@ function renderUnifiedFoldersPage() {
     if (createUnifiedBtn) createUnifiedBtn.style.display = '';
     if (createFolderBtn) createFolderBtn.style.display = 'none';
     if (createUFSubBtn) createUFSubBtn.style.display = 'none';
-    if (pc) pc.innerHTML = '<span>&#127760; Unified Folders</span>';
+    if (pc) pc.innerHTML = '<span>&#127760; Public Folders</span>';
     renderUnifiedFoldersList();
     updateSelActionBar();
   }
@@ -4089,7 +4097,7 @@ function renderUnifiedFoldersList() {
   var grid = document.getElementById('filesGrid');
   if (!grid) return;
   if (!unifiedFolders.length) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#127760;</div><p>No unified folders yet.<br>Click <strong>+ Unified</strong> to create a shared folder.</p></div>';
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#127760;</div><p>No public folders yet.<br>Click <strong>+ Unified</strong> to create a shared folder.</p></div>';
     grid.classList.remove('list-view');
     return;
   }
@@ -4265,7 +4273,7 @@ async function renderUnifiedFolderContent(folderId) {
     if (rootFiles.length) {
       html += rootFiles.map(_renderFileCard).join('');
     } else if (!subfolders.length) {
-      html = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128194;</div><p>No files in this unified folder yet.<br>Move files here from the My Files tab.</p></div>';
+      html = '<div class="empty-state" style="grid-column:1/-1"><div class="ei">&#128194;</div><p>No files in this public folder yet.<br>Move files here from the My Files tab.</p></div>';
     }
   }
 
@@ -4363,7 +4371,7 @@ async function openUnifiedFolder(id) {
   if (!uf) return;
   var isCreator = currentUser && currentUser.uid === uf.creatorUid;
   if (uf.passwordHash && !isCreator && !isAdminAccount) {
-    showModal('Enter Password', 'This unified folder is password-protected:', { type: 'password', placeholder: 'Password' }, [
+    showModal('Enter Password', 'This public folder is password-protected:', { type: 'password', placeholder: 'Password' }, [
       { label: 'Open', cls: 'btn-primary', cb: async function() {
         var inp = document.getElementById('modalTextInput');
         var pass = inp ? inp.value : '';
@@ -4390,7 +4398,7 @@ async function openUnifiedFolder(id) {
 
 function createUnifiedFolder() {
   if (!currentUser) { toast('Sign in first', 'warn'); return; }
-  showModal('New Unified Folder', 'Enter folder name:', { type: 'text', placeholder: 'e.g. Shared Exam Sheets' }, [
+  showModal('New Public Folder', 'Enter folder name:', { type: 'text', placeholder: 'e.g. Shared Exam Sheets' }, [
     { label: 'Next', cls: 'btn-primary', cb: function() {
       var name = (document.getElementById('modalTextInput').value || '').trim();
       if (!name) return;
@@ -4426,7 +4434,7 @@ function createUnifiedFolder() {
             }
             await loadUnifiedFolders();
             toast('Unified folder "' + name + '" created', 'success');
-            logAct('create_unified_folder', 'Created unified folder "' + name + '" (' + color + ')');
+            logAct('create_unified_folder', 'Created public folder "' + name + '" (' + color + ')');
             renderFilesPage();
           } catch (e) { toast('Failed to create: ' + (e && e.message ? e.message : 'error'), 'error'); }
         }},
@@ -4446,8 +4454,8 @@ async function moveToUnifiedFolderDialog() {
   var sel = Array.from(selectedFiles);
   if (!sel.length) { toast('Select files first', 'warn'); return; }
   var fileSel = sel.filter(function(id) { var n = findNode(fsRoot, id); return n && n.type === 'file'; });
-  if (!fileSel.length) { toast('Only files (not folders) can be moved to unified folders', 'warn'); return; }
-  if (!unifiedFolders.length) { toast('No unified folders available. Create one first.', 'warn'); return; }
+  if (!fileSel.length) { toast('Only files (not folders) can be moved to public folders', 'warn'); return; }
+  if (!unifiedFolders.length) { toast('No public folders available. Create one first.', 'warn'); return; }
 
   var colorBorders = { blue:'rgba(0,212,255,0.55)', green:'rgba(57,255,126,0.55)', purple:'rgba(123,97,255,0.55)', gold:'rgba(240,192,64,0.55)', red:'rgba(255,60,90,0.55)', orange:'rgba(255,149,0,0.55)', pink:'rgba(255,105,180,0.55)', teal:'rgba(0,180,204,0.55)', lime:'rgba(178,245,0,0.55)', indigo:'rgba(92,107,192,0.55)', coral:'rgba(255,107,71,0.55)', mint:'rgba(0,217,167,0.55)', crimson:'rgba(217,43,58,0.55)', amber:'rgba(255,179,0,0.55)', violet:'rgba(180,79,212,0.55)', white:'rgba(255,255,255,0.55)' };
   var colorBgs = { blue:'rgba(0,212,255,0.07)', green:'rgba(57,255,126,0.07)', purple:'rgba(123,97,255,0.07)', gold:'rgba(240,192,64,0.07)', red:'rgba(255,60,90,0.07)', orange:'rgba(255,149,0,0.07)', pink:'rgba(255,105,180,0.07)', teal:'rgba(0,180,204,0.07)', lime:'rgba(178,245,0,0.07)', indigo:'rgba(92,107,192,0.07)', coral:'rgba(255,107,71,0.07)', mint:'rgba(0,217,167,0.07)', crimson:'rgba(217,43,58,0.07)', amber:'rgba(255,179,0,0.07)', violet:'rgba(180,79,212,0.07)', white:'rgba(255,255,255,0.07)' };
@@ -4456,7 +4464,7 @@ async function moveToUnifiedFolderDialog() {
 
   var listHtml =
     '<div style="margin-top:8px;">' +
-    '<input id="moveUFSearch" class="finput" placeholder="&#128269; Search unified folders…" oninput="window._filterUFItems()" style="margin-bottom:8px;">' +
+    '<input id="moveUFSearch" class="finput" placeholder="&#128269; Search public folders…" oninput="window._filterUFItems()" style="margin-bottom:8px;">' +
     '<div id="moveUFList" style="display:flex;flex-direction:column;gap:4px;max-height:260px;overflow-y:auto;">' +
     unifiedFolders.map(function(uf) {
       var border = colorBorders[uf.color] || colorBorders.gold;
@@ -4465,7 +4473,7 @@ async function moveToUnifiedFolderDialog() {
     }).join('') +
     '</div></div>';
 
-  showRawModal('Move to Unified Folder', fileSel.length + ' file(s) — select destination:', listHtml, [
+  showRawModal('Move to Public Folder', fileSel.length + ' file(s) — select destination:', listHtml, [
     { label: 'Next', cls: 'btn-primary', cb: async function() {
       var destId = window._moveUFDest;
       if (!destId) { toast('Select a folder first', 'warn'); return; }
@@ -4537,7 +4545,7 @@ function _showUFSubfolderDestPicker(sel, folderId, uf, subfolders) {
   });
   html += '</div>';
   window._ufMoveSubdest = null;
-  showRawModal('Move to Unified Folder', 'Select destination in "' + escH(uf.name) + '":', html, [
+  showRawModal('Move to Public Folder', 'Select destination in "' + escH(uf.name) + '":', html, [
     { label: 'Move Here', cls: 'btn-primary', cb: function() {
       closeModal();
       _executeUFFilesMove(sel, folderId, window._ufMoveSubdest, uf);
@@ -4571,7 +4579,7 @@ async function _executeUFFilesMove(sel, folderId, parentSubfolderId, uf) {
       var ext = dotIdx > 0 ? targetName.substring(dotIdx) : '';
       var n = 1, newName;
       do { newName = base + '_' + n + ext; n++; } while (usedNames.indexOf(newName) !== -1);
-      toast('"' + targetName + '" renamed to "' + newName + '" in unified folder (duplicate)', 'warn');
+      toast('"' + targetName + '" renamed to "' + newName + '" in public folder (duplicate)', 'warn');
       targetName = newName;
     }
     usedNames.push(targetName);
@@ -4734,7 +4742,7 @@ async function deleteUnifiedFolder(folderId) {
   var uf = unifiedFolders.find(function(f) { return f.id === folderId; });
   if (!uf) return;
   if (!currentUser || currentUser.uid !== uf.creatorUid) { toast('Only the folder creator can delete this folder', 'warn'); return; }
-  showModal('Delete Unified Folder?', '"' + uf.name + '" and ALL its files will be permanently deleted.\nThis cannot be undone.', null, [
+  showModal('Delete Public Folder?', '"' + uf.name + '" and ALL its files will be permanently deleted.\nThis cannot be undone.', null, [
     { label: 'Delete Forever', cls: 'btn-danger', cb: async function() {
       closeModal();
       try {
@@ -4911,7 +4919,7 @@ function ufFileCtxMoveToMyFiles() {
   if (!file) return;
   var isUploader = currentUser && file.uploaderUid === currentUser.uid;
   if (!isUploader) { toast('Only the uploader can move this file', 'warn'); return; }
-  showModal('Move to My Files?', 'Move "' + file.name + '" from this unified folder to your My Files?', null, [
+  showModal('Move to My Files?', 'Move "' + file.name + '" from this public folder to your My Files?', null, [
     { label: 'Move', cls: 'btn-primary', cb: async function() {
       closeModal();
       try {
@@ -5810,11 +5818,11 @@ async function appOnLogin(user, profile) {
   stateLoaded = true;
 
   purgeExpiredBin(); updateBinCount(); applySettings(); updateStats(); updatePreview(); renderOverview();
-  // Reset files tab DOM to My Files (fixes stale Unified Folders tab after logout)
+  // Reset files tab DOM to My Files (fixes stale Public Folders tab after logout)
   filesTab = 'myfiles'; currentUnifiedFolderId = null; currentUFSubfolderId = null; unifiedSubfoldersCache = {};
   var _tf = document.getElementById('tabMyFiles'); if (_tf) _tf.classList.add('active');
   var _tu = document.getElementById('tabUnified'); if (_tu) _tu.classList.remove('active');
-  // Load unified folders then render files page
+  // Load public folders then render files page
   loadUnifiedFolders().then(function() { renderFilesPage(); });
   renderDictList();
   loadStudentDict();
@@ -6695,7 +6703,7 @@ if (!CONFIGURED) {
       return true;
     },
 
-    // ── shared / unified folders ──
+    // ── shared / public folders ──
     async createSharedFolder(data) {
       const ref = await addDoc(collection(db, 'sharedFolders'), {
         name: data.name || 'Unnamed',
