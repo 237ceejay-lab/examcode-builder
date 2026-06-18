@@ -649,7 +649,6 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
       <div class="auth-toggle">
         <button id="tabSignin" class="active" onclick="authTab('signin')">Sign In</button>
         <button id="tabSignup" onclick="authTab('signup')">Sign Up</button>
-        <button id="tabSetup" onclick="authTab('setup')">First-time Setup</button>
       </div>
 
       <div class="auth-err" id="authErr"></div>
@@ -693,26 +692,6 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         <button class="btn btn-primary btn-full" id="srBtn" onclick="appRegisterUser()">Request Account</button>
       </div>
 
-      <!-- FIRST-TIME OWNER SETUP -->
-      <div id="formSetup" style="display:none;">
-        <div class="admin-note" style="margin-bottom:14px;">This creates the <strong>super-admin (owner)</strong> account. It only works for the owner email configured in the app. All other accounts are created by the owner from the Admin panel.</div>
-        <div class="auth-field">
-          <div class="flabel">Display Name</div>
-          <input class="finput" id="suName" placeholder="e.g. Patryll Gabsa">
-        </div>
-        <div class="auth-field">
-          <div class="flabel">Owner Email</div>
-          <input class="finput" id="suEmail" type="email" autocomplete="username" placeholder="owner@example.com">
-        </div>
-        <div class="auth-field">
-          <div class="flabel">Create Password</div>
-          <div class="auth-pass-wrap">
-            <input class="finput" id="suPass" type="password" autocomplete="new-password" placeholder="At least 6 characters">
-            <span class="pass-eye" onclick="togglePass('suPass',this)">&#128065;</span>
-          </div>
-        </div>
-        <button class="btn btn-primary btn-full" id="suBtn" onclick="appSetupOwner()">Create Owner Account</button>
-      </div>
     </div>
 
     <div class="auth-copy">&copy; GABSA PATRYLL NYAMAH</div>
@@ -5607,7 +5586,7 @@ function timeAgo(ts) {
 // ─── AUTH SCREEN UI ───────────────────────────────
 function authTab(which) {
   appClearAuthMsg();
-  ['signin','signup','setup'].forEach(function(t) {
+  ['signin','signup'].forEach(function(t) {
     var key = t.charAt(0).toUpperCase() + t.slice(1);
     var btn = document.getElementById('tab' + key);
     var form = document.getElementById('form' + key);
@@ -5754,7 +5733,7 @@ function appOnLogout() {
   var siBtn = document.getElementById('siBtn'); if (siBtn) { siBtn.classList.remove('auth-busy'); siBtn.textContent = 'Sign In'; }
   var authOvl = document.getElementById('authLoadingOverlay'); if (authOvl) authOvl.classList.remove('visible');
   authTab('signin');
-  ['siPass','suPass'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+  var siPass = document.getElementById('siPass'); if (siPass) siPass.value = '';
   setSaveLabel('Signed out');
 }
 
