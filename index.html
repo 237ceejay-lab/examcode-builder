@@ -633,6 +633,25 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
 .admin-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .filter-btn{border:1px solid var(--border2);background:var(--surface3);color:var(--text2);border-radius:6px;font-size:0.68rem;font-weight:600;padding:4px 10px;cursor:pointer;font-family:var(--font);transition:all .15s;}
 .filter-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
+/* ─── DIAGNOSTICS MODAL ─── */
+.diag-badge{display:inline-block;background:var(--red);color:#fff;font-size:0.56rem;font-family:var(--mono);font-weight:700;padding:0 5px;border-radius:10px;margin-left:4px;min-width:16px;text-align:center;vertical-align:middle;line-height:1.6;}
+.diag-badge:empty,.diag-badge[data-n="0"]{display:none;}
+.diag-entry{display:grid;grid-template-columns:auto 90px 1fr auto;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);align-items:start;font-size:0.73rem;}
+.diag-entry:last-child{border-bottom:none;}
+.dlevel{font-size:0.58rem;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;font-family:var(--mono);}
+.dlevel-error{background:var(--red-dim);color:var(--red);}
+.dlevel-warn{background:rgba(255,149,0,0.15);color:var(--orange);}
+.dlevel-info{background:var(--accent-dim);color:var(--accent);}
+.dcontext{color:var(--accent3);font-size:0.7rem;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dmsg{color:var(--text2);word-break:break-all;line-height:1.4;}
+.dts{color:var(--text3);font-size:0.62rem;font-family:var(--mono);white-space:nowrap;}
+.diag-status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px;}
+.diag-status-item{background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+.diag-status-key{font-size:0.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono);}
+.diag-status-val{font-size:0.76rem;font-weight:600;color:var(--text1);margin-top:2px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.diag-status-val.ok{color:var(--green);}
+.diag-status-val.err{color:var(--red);}
+.diag-empty{color:var(--text3);font-size:0.8rem;padding:12px 0;text-align:center;}
 </style>
 </head>
 <body>
@@ -970,7 +989,10 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
         <div class="admin-title">&#128737;&#65039; Admin <span>Console</span></div>
         <div class="admin-sub">Manage user accounts, access and activity across the whole app.</div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="adminCreateUserDialog()">&#43; Create User</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" id="diagBtn" onclick="showDiagnostics()">&#9881; Diagnostics <span class="diag-badge" id="diagBadge"></span></button>
+        <button class="btn btn-primary btn-sm" onclick="adminCreateUserDialog()">&#43; Create User</button>
+      </div>
     </div>
 
     <div class="admin-stat-grid" id="adminStats"></div>
@@ -1422,6 +1444,20 @@ table.admin-tbl tr:hover td{background:var(--surface2);}
   </div>
 </div>
 
+<!-- DIAGNOSTICS MODAL (super-admin) -->
+<div class="modal-overlay" id="diagOverlay" onclick="if(event.target===this)closeDiag()" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal" style="max-width:700px;width:100%;gap:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div class="modal-title">&#9881;&#65039; System Diagnostics</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="_clearDiagLog()">Clear Log</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeDiag()">&#10005;</button>
+      </div>
+    </div>
+    <div id="diagContent" style="overflow-y:auto;max-height:62vh;"></div>
+  </div>
+</div>
+
 <div class="ctx-menu" id="ctxMenu">
   <div class="ctx-item" onclick="ctxRename()">&#9999;&#65039; Rename</div>
   <div class="ctx-item" onclick="ctxOpen()">&#128194; Open / Edit</div>
@@ -1565,6 +1601,8 @@ var adminUsersCache = [];
 var adminActivityCache = [];
 var adminRequestsCache = [];
 var _adminUserFilter = 'all';
+var _diagLog = [];  // {ts, level, context, msg}
+var _DIAG_MAX = 150;
 
 // ─── INIT (UI only — data loads after sign-in) ────
 window.addEventListener('load', function() {
@@ -1594,6 +1632,81 @@ window.addEventListener('load', function() {
     }
   }, 9000);
 });
+
+// ─── DIAGNOSTICS ──────────────────────────────────
+function diagLog(level, context, err) {
+  var msg = err ? (
+    typeof err === 'string' ? err :
+    (err.message || err.code || err.toString() || '(no detail)').slice(0, 350)
+  ) : '(no detail)';
+  _diagLog.unshift({ ts: Date.now(), level: level || 'info', context: context || '?', msg: msg });
+  if (_diagLog.length > _DIAG_MAX) _diagLog.length = _DIAG_MAX;
+  var errors = _diagLog.filter(function(e) { return e.level === 'error'; }).length;
+  var badge = document.getElementById('diagBadge');
+  if (badge) badge.textContent = errors > 0 ? String(errors) : '';
+}
+window.onerror = function(msg, src, line, col, err) {
+  var file = src ? src.split('/').pop() : '?';
+  diagLog('error', file + ':' + (line || 0), { message: msg, code: (err && err.stack ? err.stack.split('\n')[0] : '') });
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  diagLog('error', 'unhandled-promise', e.reason || '(no reason)');
+});
+
+function showDiagnostics() {
+  var ov = document.getElementById('diagOverlay');
+  if (!ov) return;
+  _renderDiagContent();
+  ov.style.display = 'flex';
+}
+function closeDiag() {
+  var ov = document.getElementById('diagOverlay');
+  if (ov) ov.style.display = 'none';
+}
+function _clearDiagLog() {
+  _diagLog = [];
+  var badge = document.getElementById('diagBadge');
+  if (badge) badge.textContent = '';
+  _renderDiagContent();
+}
+function _renderDiagContent() {
+  var el = document.getElementById('diagContent');
+  if (!el) return;
+  var now = Date.now();
+  function relTime(ts) {
+    var s = Math.floor((now - ts) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    return new Date(ts).toLocaleTimeString();
+  }
+  // ── status indicators ──
+  var fbOk = !!(window.FB);
+  var userOk = !!(currentUser);
+  var statusHtml = '<div class="diag-status-grid">' +
+    '<div class="diag-status-item"><div class="diag-status-key">Firebase SDK</div><div class="diag-status-val ' + (fbOk ? 'ok' : 'err') + '">' + (fbOk ? '&#9679; Connected' : '&#9679; Not loaded') + '</div></div>' +
+    '<div class="diag-status-item"><div class="diag-status-key">Signed-in user</div><div class="diag-status-val ' + (userOk ? 'ok' : 'err') + '">' + escH((currentUser && currentUser.email) || '— none —') + '</div></div>' +
+    '<div class="diag-status-item"><div class="diag-status-key">Role</div><div class="diag-status-val">' + (isAdminAccount ? 'Super-admin' : ((currentProfile && currentProfile.canApprove) ? 'Approver' : (currentUser ? 'User' : '—'))) + '</div></div>' +
+    '<div class="diag-status-item"><div class="diag-status-key">State loaded</div><div class="diag-status-val ' + (stateLoaded ? 'ok' : '') + '">' + (stateLoaded ? '&#10003; Yes' : '&#8212; No') + '</div></div>' +
+    '<div class="diag-status-item"><div class="diag-status-key">Log entries</div><div class="diag-status-val">' + _diagLog.length + ' / ' + _DIAG_MAX + '</div></div>' +
+    '<div class="diag-status-item"><div class="diag-status-key">Errors in log</div><div class="diag-status-val ' + (_diagLog.filter(function(e){return e.level==='error';}).length > 0 ? 'err' : 'ok') + '">' + _diagLog.filter(function(e){return e.level==='error';}).length + '</div></div>' +
+    '</div>';
+  // ── log entries ──
+  var logHtml;
+  if (!_diagLog.length) {
+    logHtml = '<div class="diag-empty">No log entries yet. Errors and warnings appear here as they occur.</div>';
+  } else {
+    logHtml = '<div>' + _diagLog.map(function(e) {
+      return '<div class="diag-entry">' +
+        '<span class="dlevel dlevel-' + e.level + '">' + e.level + '</span>' +
+        '<span class="dcontext" title="' + escAttr(e.context) + '">' + escH(e.context) + '</span>' +
+        '<span class="dmsg">' + escH(e.msg) + '</span>' +
+        '<span class="dts">' + relTime(e.ts) + '</span>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+  el.innerHTML = statusHtml + '<div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono);margin-bottom:6px;">Event Log</div>' + logHtml;
+}
 
 // ─── PAGE SWITCH ──────────────────────────────────
 function switchPage(name) {
@@ -1656,7 +1769,7 @@ function saveToStorage() {
       else setSaveLabel('Synced ' + new Date().toLocaleTimeString());
     }).catch(function(e) {
       setSaveLabel('Sync failed');
-      console.warn('cloud save failed', e);
+      diagLog('error', 'cloud-save', e);
       toast('Could not sync: ' + (e && e.message ? e.message : 'error'), 'error');
     });
   } catch (e) {}
@@ -5693,7 +5806,7 @@ async function appOnLogin(user, profile) {
   setSaveLabel('Loading…');
   appShowAuthOk('Loading your workspace…');
   try { var payload = await window.FB.loadState(); applyLoadedState(payload); }
-  catch (e) { console.warn('load failed', e); toast('Could not load your data: ' + (e && e.message ? e.message : 'error'), 'error'); }
+  catch (e) { diagLog('error', 'cloud-load', e); toast('Could not load your data: ' + (e && e.message ? e.message : 'error'), 'error'); }
   stateLoaded = true;
 
   purgeExpiredBin(); updateBinCount(); applySettings(); updateStats(); updatePreview(); renderOverview();
@@ -5769,12 +5882,12 @@ async function adminRefresh() {
   if (reqList) reqList.innerHTML = '<div class="admin-empty">Loading requests…</div>';
   if (isAdminAccount) {
     try { adminUsersCache = await window.FB.listUsers(); }
-    catch (e) { adminUsersCache = []; toast('Could not load users: ' + (e && e.message ? e.message : 'error'), 'error'); }
+    catch (e) { adminUsersCache = []; diagLog('error', 'listUsers', e); toast('Could not load users: ' + (e && e.message ? e.message : 'error'), 'error'); }
     try { adminActivityCache = await window.FB.listActivity(200); }
     catch (e) { adminActivityCache = []; }
   }
   try { adminRequestsCache = await window.FB.listPendingRequests(); }
-  catch (e) { adminRequestsCache = []; }
+  catch (e) { adminRequestsCache = []; diagLog('error', 'listPendingRequests', e); }
   if (isAdminAccount) { renderAdminStats(); renderAdminUsers(); renderAdminActivity(); }
   renderAdminRequests();
   updateAdminRequestBadge();
@@ -5860,6 +5973,7 @@ function renderAdminUsers() {
     } else {
       acts += '<button class="mini-btn" onclick="adminResetPassword(\'' + em + '\')">Reset PW</button>';
       acts += '<button class="mini-btn" onclick="adminViewUserDocs(\'' + uid + '\',\'' + em + '\')">&#128196; Docs</button>';
+      if (!isSelf) acts += '<button class="mini-btn" onclick="adminChangeEmail(\'' + uid + '\',\'' + em + '\')">&#9998; Email</button>';
       if (!isSelf) {
         acts += '<button class="mini-btn ' + (u.disabled ? 'good' : 'danger') + '" onclick="adminToggleDisable(\'' + uid + '\',' + (u.disabled ? 'true' : 'false') + ',\'' + em + '\')">' + (u.disabled ? 'Enable' : 'Disable') + '</button>';
         if (u.role !== 'superadmin') {
@@ -6108,6 +6222,47 @@ function adminDeleteData(uid, email) {
     }},
     { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
   ]);
+}
+
+function adminChangeEmail(uid, currentEmail) {
+  if (!isAdminAccount) return;
+  showModal(
+    'Change Email Address',
+    'Enter the new email address for ' + currentEmail + '.\n\nIMPORTANT: This updates the profile email shown in the app. The Firebase Authentication sign-in email is separate and cannot be changed from this panel — the user must continue signing in with their current email (' + currentEmail + ') unless you manually update it in the Firebase Console (Authentication tab).',
+    { type: 'text', placeholder: 'new@example.com' },
+    [
+      { label: 'Save Email', cls: 'btn-primary', cb: async function() {
+        var newEmail = (document.getElementById('modalTextInput').value || '').trim().toLowerCase();
+        if (!newEmail) { toast('Enter a new email address', 'warn'); return; }
+        if (newEmail === currentEmail.toLowerCase()) { closeModal(); return; }
+        // basic format check
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { toast('Enter a valid email address', 'warn'); return; }
+        // uniqueness check against all known users
+        var conflict = adminUsersCache.find(function(u) {
+          return u.uid !== uid && (u.email || '').toLowerCase() === newEmail;
+        });
+        if (conflict) {
+          toast('That email is already used by ' + (conflict.displayName || conflict.email) + '. Each account must have a unique email.', 'error');
+          return;
+        }
+        try {
+          await window.FB.changeUserEmail(uid, newEmail);
+          logAct('admin_change_email', 'Changed profile email for ' + currentEmail + ' → ' + newEmail);
+          // update local cache
+          var cached = adminUsersCache.find(function(u) { return u.uid === uid; });
+          if (cached) cached.email = newEmail;
+          closeModal();
+          renderAdminUsers();
+          toast('Profile email updated to ' + newEmail + '. Reminder: sign-in email in Firebase Auth is unchanged.', 'success');
+          diagLog('info', 'admin-change-email', 'Changed profile email: ' + currentEmail + ' → ' + newEmail);
+        } catch(e) {
+          diagLog('error', 'admin-change-email', e);
+          toast('Failed to update email: ' + (e && e.message ? e.message : 'error'), 'error');
+        }
+      }},
+      { label: 'Cancel', cls: 'btn-ghost', cb: closeModal }
+    ]
+  );
 }
 
 // modal that accepts arbitrary input HTML (used for the create-user form)
@@ -6498,8 +6653,9 @@ if (!CONFIGURED) {
       try { await signOut(sec); } catch (e) {}
       return uid;
     },
-    setDisabled:   (uid, disabled)   => setDoc(doc(db, 'users', uid), { disabled: !!disabled }, { merge: true }),
-    setRole:       (uid, role)       => setDoc(doc(db, 'users', uid), { role: role === 'superadmin' ? 'superadmin' : 'user' }, { merge: true }),
+    setDisabled:      (uid, disabled)   => setDoc(doc(db, 'users', uid), { disabled: !!disabled }, { merge: true }),
+    setRole:          (uid, role)       => setDoc(doc(db, 'users', uid), { role: role === 'superadmin' ? 'superadmin' : 'user' }, { merge: true }),
+    changeUserEmail:  (uid, newEmail)   => setDoc(doc(db, 'users', uid), { email: newEmail }, { merge: true }),
     approveUser:   (uid)             => setDoc(doc(db, 'users', uid), { status: 'active', approvedAt: serverTimestamp() }, { merge: true }),
     rejectUser:    (uid, reason)     => setDoc(doc(db, 'users', uid), { status: 'rejected', rejectedAt: serverTimestamp(), rejectionReason: reason || '' }, { merge: true }),
     setCanApprove: (uid, canApprove) => setDoc(doc(db, 'users', uid), { canApprove: !!canApprove }, { merge: true }),
